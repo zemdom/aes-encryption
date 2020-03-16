@@ -1,11 +1,9 @@
-from aes.keys import SessionKey
+from aes.keys import KeyHandler
 
 
 def main():
-    # session_key = SessionKey()
-    # session_key.key_size = 128
-    # session_key.generate()
-    # print(session_key.session_key)
+    key_handler = KeyHandler()
+    key_handler.handle_pretransmission()
     ...
 
 
