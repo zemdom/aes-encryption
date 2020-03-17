@@ -51,6 +51,7 @@ class SenderSessionKey:
         seed = int(time.strftime('%H%M%S'))
 
         rand = Random(seed)
+        # AES key can be 128, 192 or 256 bits long
         self.key_size = rand.choice([128, 192, 256])
         self.session_key = rand.getrandbits(self.key_size)
 
@@ -121,16 +122,6 @@ class SenderRSAKey:
             with open(self.path_public_key, 'wb') as file_out:
                 file_out.write(self.encrypted_public_key)
 
-    def create(self):
-        loaded = self.__load_key()
-
-        if loaded:
-            self.__decrypt_key()
-        else:
-            self.__generate_key()
-            self.__encrypt_key()
-            self.__store_key()
-
     def __load_key(self):
         try:
             with open(self.path_private_key, 'r') as file_in:
@@ -142,3 +133,13 @@ class SenderRSAKey:
             return False
         else:
             return True
+
+    def create(self):
+        loaded = self.__load_key()
+
+        if loaded:
+            self.__decrypt_key()
+        else:
+            self.__generate_key()
+            self.__encrypt_key()
+            self.__store_key()
