@@ -1,8 +1,7 @@
-# establishes connection with a peer
 import asyncio
 import socket
 
-from communication.messagehandler import MessageHandler
+from communication.message_handler import MessageHandler
 from communication.socket import Socket
 
 
