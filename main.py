@@ -1,39 +1,20 @@
-import asyncio
 import sys
 import threading
-from time import sleep
+from queue import SimpleQueue
 
-from communication.server import Server
-from communication.socket import Socket
+from communication.server import run_server
+from communication.socket import run_client
 
 
 def main():
-    # threading.Thread(target=run_asyncio).start()
-    run_asyncio(sys.argv[1], sys.argv[2])
-    # GUI main loop
+    # unbounded FIFO queues
+    ingoing_data = SimpleQueue()
+    outgoing_data = SimpleQueue()
 
-
-def run_asyncio(server_port, peer_port):
-    loop = asyncio.get_event_loop()
-    asyncio.set_event_loop(loop)
-
-    server = Server(server_port=server_port)
-
-    loop.create_task(server.run())
-
-    sleep(5)
-    socket = Socket(host='192.168.0.181', port=peer_port)
-    loop.create_task(socket.send_data(loop, 'INIT', b'hello'))
-
-    try:
-        loop.run_forever()
-    except KeyboardInterrupt:
-        pass
-
-    server.close()
-    socket.close()
-    loop.shutdown_asyncgens()  # close all opened asynchronous generators
-    loop.close()
+    outgoing_data.put(('INIT', 'Hello World!'))
+    threading.Thread(target=run_server, args=(ingoing_data, sys.argv[1])).start()
+    threading.Thread(target=run_client, args=(outgoing_data, sys.argv[2])).start()
+    # GUI thread
 
 
 if __name__ == '__main__':
