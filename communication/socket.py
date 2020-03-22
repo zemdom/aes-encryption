@@ -1,83 +1,50 @@
-import socket
-import struct
-import threading
+import asyncio
 
-from config import SOCKET_BUFSIZE, SOCKET_HEADSIZE, SOCKET_HEADFORMAT
+from communication.message_handler import MessageHandler
 
 
-# sends data to a peer
-class Socket:
-    def __init__(self, host, port, sock=None):
-        self.host = host
-        self.port = int(port)
+class SocketProtocol(asyncio.Protocol):
+    def __init__(self, message, on_con_lost):
+        self.message = message
+        self.on_con_lost = on_con_lost
+        self.ack_received = False
 
-        if sock:
-            self.sock = sock
-        else:
-            self.__open()
+    def connection_made(self, transport):
+        transport.write(self.message)
+        # transport.write(self.message.encode())
+        print('[SOCKET] Data sent: {!r}'.format(self.message))
 
-        self.debug = True
+    def data_received(self, data):
+        message = data.decode()
+        print('[SOCKET] Data received: {!r}'.format(data.decode()))
 
-    @staticmethod
-    def __pack_message(message_type, message_data):
-        # convert bytes to string
-        message_data = message_data.decode()
-        message_length = len(message_data)
-        # convert string to bytes, ! - big-endian; 4s - 4 chars; L - unsigned long, %d s - chars
-        message = struct.pack("!%s%ds" % (SOCKET_HEADFORMAT, message_length), message_type.encode(), message_length,
-                              message_data.encode())
-        return message
+        if message == 'ACK0':
+            self.ack_received = True
 
-    def __debug(self, text):
-        if self.debug:
-            print("<%s>[SOCKET] - %s" % (str(threading.currentThread().getName()), text))
+    def connection_lost(self, exc):
+        print('[SOCKET] The server closed the connection')
+        self.on_con_lost.set_result(self.ack_received)
 
-    def __open(self):
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sock.connect((self.host, self.port))
-        self.sock.settimeout(None)
 
-        # chooses the best address to use for connection, compatible with IPv4 and IPv6
-        # self.sock = socket.create_connection((self.host, int(self.port)))
+def run_client(outgoing_data, port):
+    asyncio.run(create_client(outgoing_data, port))
 
-    async def send_data(self, loop, message_type, message_data):
-        message = self.__pack_message(message_type, message_data)
-        # message_length = len(message)
 
-        # total_sent = 0
-        # while total_sent < message_length:
-        # socket.send() retries a call if it is interrupted
-        # sent = await loop.sock_send(self.sock, message[total_sent:])
+async def create_client(outgoing_data, port):
+    loop = asyncio.get_running_loop()
+    sent = False
 
-        # if sent == 0:
-        #     return False
-        # total_sent += sent
-        # TODO find sock.send() equivalent
-        await loop.sock_sendall(self.sock, message)
-        return True
+    while True:  # TODO
+        message = MessageHandler.pack_message(*outgoing_data.get())
+        while not sent:
+            on_con_lost = loop.create_future()
+            transport, protocol = await loop.create_connection(lambda: SocketProtocol(message, on_con_lost),
+                                                               '127.0.0.1', port)
 
-    async def receive_data(self, loop):
-        message = b''
-        total_received = 0
-        while total_received < SOCKET_HEADSIZE:
-            message += await loop.sock_recv(self.sock, SOCKET_BUFSIZE)
-            received = len(message)
-            if received == 0:
-                return None, None
-            total_received += received
-
-        message_type, message_length = struct.unpack('!%s' % SOCKET_HEADFORMAT, message[:8])
-
-        while total_received < message_length:
-            message += await loop.sock_recv(self.sock, SOCKET_BUFSIZE)
-            received = len(message)
-            if received == 0:
-                return None, None
-            total_received += received
-
-        message = message[8:]
-        return message_type.decode(), message.decode()
-
-    def close(self):
-        self.sock.close()
-        self.sock = None
+            # wait until the protocol signals that the connection is lost and close the transport
+            try:
+                await on_con_lost
+                sent = on_con_lost.result()
+                print(sent)
+            finally:
+                transport.close()
