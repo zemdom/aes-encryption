@@ -15,10 +15,9 @@ class SendTab(QWidget):
         vertical_layout = QVBoxLayout()
         vertical_layout.addLayout(self.__initReceiverInput())
         vertical_layout.addLayout(self.__initCypherMethodSelect())
-        vertical_layout.addLayout(self.__initContentTabs())
+        vertical_layout.addLayout(self.__initTabs())
         vertical_layout.addStretch(1)
-        vertical_layout.addLayout(self.__initSendButton())
-        vertical_layout.addLayout(self.__initProgressBar())
+        vertical_layout.addLayout(self.__initFooter())
         self.setLayout(vertical_layout)
 
     def __initReceiverInput(self):
@@ -36,24 +35,38 @@ class SendTab(QWidget):
         layout.addWidget(self.cypher_mode)
         return layout
 
-    def __initContentTabs(self):
+    def __initTabs(self):
         layout = QHBoxLayout()
         self.tabs = QTabWidget()
-        self.text_sub_tab = TextSubTab()
-        self.tabs.addTab(self.text_sub_tab, "Text")
-        self.file_sub_tab = FileSubTab()
-        self.tabs.addTab(self.file_sub_tab, "File")
+        self.__initTextSubTab()
+        self.__initFileSubTab()
         self.tabs.resize(250, 300)
         layout.addWidget(self.tabs)
         return layout
 
-    def __initSendButton(self):
+    def __initFileSubTab(self):
+        self.file_sub_tab = FileSubTab(sending=True)
+        self.tabs.addTab(self.file_sub_tab, "File")
+
+    def __initTextSubTab(self):
+        self.text_sub_tab = TextSubTab(sending=True)
+        self.tabs.addTab(self.text_sub_tab, "Text")
+
+    def __initFooter(self):
         layout = QHBoxLayout()
-        layout.addStretch(1)
+        self.__initSendButton(layout)
+        self.__initProgressBar(layout)
+        return layout
+
+    def __initProgressBar(self, layout):
+        self.progress_bar = QProgressBar(self)
+        layout.addWidget(QLabel("Sending progress:"))
+        layout.addWidget(self.progress_bar)
+
+    def __initSendButton(self, layout):
         send_button = QPushButton("Send", self)
         send_button.clicked.connect(self.__sendMessage)
         layout.addWidget(send_button)
-        return layout
 
     def __sendMessage(self):
         if self.receiver.text() == '':
@@ -66,13 +79,6 @@ class SendTab(QWidget):
         else:
             print("Send encrypted file")
             # encrypt(self.receiver.text(), self.cypher_mode.currentText(), self.file_sub_tab.file)
-
-    def __initProgressBar(self):
-        layout = QHBoxLayout()
-        self.progress_bar = QProgressBar(self)
-        layout.addWidget(QLabel("Sending progress:"))
-        layout.addWidget(self.progress_bar)
-        return layout
 
     def updateProgressBar(self, value):
         self.progress_bar.setValue(value)
