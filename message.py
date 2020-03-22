@@ -1,9 +1,0 @@
-class Message:
-    def __init__(self):
-        self.data = ...
-
-    def create_blocks(self):
-        ...
-
-    def add_padding(self):
-        ...
