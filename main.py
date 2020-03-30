@@ -3,7 +3,7 @@ import threading
 
 from PyQt5.QtWidgets import QApplication
 
-from app.App import App
+from app.app import App
 from threads.async_queue import AsyncQueue
 from threads.receiver_thread import create_receiver_thread
 from threads.sender_thread import create_sender_thread

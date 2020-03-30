@@ -13,14 +13,14 @@ class MessageHandler:
         self.aes = AESEncryption(input_queue, output_queue, encrypt)
         self.handlers = dict()
 
-    def dispatch_message(self, message):
-        pass
-
     async def start_mainloop(self):
         while True:  # TODO
             input_data = await self.input_queue.async_get()
             output_data = self.dispatch_message(input_data)
             self.output_queue.async_put(output_data)
+
+    def dispatch_message(self, message):
+        pass
 
 
 class SenderMessageHandler(MessageHandler):

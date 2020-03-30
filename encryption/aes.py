@@ -3,6 +3,8 @@ from Cryptodome.Cipher import AES
 
 from config import BLOCK_SIZE
 
+from encryption.block_cypher_mode import BlockCypherMode
+
 
 class AESEncryption:
     def __init__(self, input_queue, output_queue, encode=True):
@@ -14,8 +16,10 @@ class AESEncryption:
         self.block_size = BLOCK_SIZE
         self.initial_vector = get_random_bytes(16)
         self.cipher = None
-        self.cipher_mode_dict = {'ecb': AESEncryption.__set_ecb_mode, 'cbc': AESEncryption.__set_cbc_mode,
-                                 'cfb': AESEncryption.__set_cfb_mode, 'ofb': AESEncryption.__set_ofb_mode}
+        self.cipher_mode_dict = {BlockCypherMode.ECB: AESEncryption.__set_ecb_mode,
+                                 BlockCypherMode.CBC: AESEncryption.__set_cbc_mode,
+                                 BlockCypherMode.CFB: AESEncryption.__set_cfb_mode,
+                                 BlockCypherMode.OFB: AESEncryption.__set_ofb_mode}
 
     # data length has to be a multiple of a block size
     def __set_ecb_mode(self):

@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QMainWindow
 
-from app.TabsWidget import TabsWidget
+from app.tabs_widget import TabsWidget
 
 
 class App(QMainWindow):
