@@ -1,26 +1,34 @@
 import sys
 import threading
-from queue import SimpleQueue
 
 from PyQt5.QtWidgets import QApplication
 
 from app.App import App
-from communication.server import run_server
-from communication.socket import run_client
+from threads.async_queue import AsyncQueue
+from threads.receiver_thread import create_receiver_thread
+from threads.sender_thread import create_sender_thread
 
 
-def main():
-    # unbounded FIFO queues
-    ingoing_data = SimpleQueue()
-    outgoing_data = SimpleQueue()
+def create_gui_thread():
+    threading.Thread(target=run_gui).start()
 
-    outgoing_data.put(('INIT', 'Hello World!'))
-    threading.Thread(target=run_server, args=(ingoing_data, sys.argv[1])).start()
-    threading.Thread(target=run_client, args=(outgoing_data, sys.argv[2])).start()
-    # GUI thread
+
+def run_gui():
     app = QApplication(sys.argv)
     ex = App()
     sys.exit(app.exec_())
+
+
+def main():
+    ingoing_plaindata = AsyncQueue()
+    outgoing_plaindata = AsyncQueue()
+
+    outgoing_plaindata.async_put(('INIT', 'Hello World!'))
+    outgoing_plaindata.async_put(('QUIT', 'Bye'))
+
+    create_receiver_thread(ingoing_plaindata)
+    create_sender_thread(outgoing_plaindata)
+    create_gui_thread()
 
 
 if __name__ == '__main__':
