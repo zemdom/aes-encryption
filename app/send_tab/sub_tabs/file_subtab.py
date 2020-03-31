@@ -34,7 +34,7 @@ class FileSubTab(QWidget):
     def __init_receive_layout(self):
         layout = QHBoxLayout()
         self.download_file_button = QPushButton("Download file")
-        self.download_file_button.clicked.connect(self.__downloadFile)
+        self.download_file_button.clicked.connect(self.__download_file)
         layout.addWidget(self.download_file_button)
         return layout
 
