@@ -4,21 +4,16 @@ from config import BLOCK_SIZE
 
 
 class DataHandler:
-    def __init__(self):
-        self.data = None
-        self.padded_data = None
-        self.divided_data = []
+    @staticmethod
+    def add_padding(data):
+        return pad(data, block_size=BLOCK_SIZE)
 
-    def __add_padding(self):
-        if self.data:
-            self.padded_data = pad(self.data, block_size=BLOCK_SIZE)
+    @staticmethod
+    def remove_padding(data):
+        return unpad(data, block_size=BLOCK_SIZE)
 
-    def __remove_padding(self):
-        if self.padded_data:
-            self.data = unpad(self.padded_data, block_size=BLOCK_SIZE)
-
-    def divide(self):
+    def __divide(self, data):
         ...
 
-    def merge(self):
+    def __merge(self, data):
         ...

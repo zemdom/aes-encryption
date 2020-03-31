@@ -1,21 +1,21 @@
 from PyQt5.QtWidgets import QWidget, QHBoxLayout, QLabel, QLineEdit, QVBoxLayout, QTabWidget
 
-from app.send_tab.sub_tabs.FileSubTab import FileSubTab
-from app.send_tab.sub_tabs.TextSubTab import TextSubTab
+from app.send_tab.sub_tabs.file_subtab import FileSubTab
+from app.send_tab.sub_tabs.text_subtab import TextSubTab
 
 
 class ReceiveTab(QWidget):
     def __init__(self, parent=None):
         super(QWidget, self).__init__(parent)
-        self.__createLayout()
+        self.__create_layout()
 
-    def __createLayout(self):
+    def __create_layout(self):
         vertical_layout = QVBoxLayout()
-        vertical_layout.addLayout(self.__initSenderInput())
-        vertical_layout.addLayout(self.__initContentTabs())
+        vertical_layout.addLayout(self.__init_sender_input())
+        vertical_layout.addLayout(self.__init_content_tabs())
         self.setLayout(vertical_layout)
 
-    def __initSenderInput(self):
+    def __init_sender_input(self):
         layout = QHBoxLayout()
         layout.addWidget(QLabel("Sender:"))
         self.sender = QLineEdit()
@@ -23,7 +23,7 @@ class ReceiveTab(QWidget):
         layout.addWidget(self.sender)
         return layout
 
-    def __initContentTabs(self):
+    def __init_content_tabs(self):
         layout = QHBoxLayout()
         self.tabs = QTabWidget()
         self.text_sub_tab = TextSubTab(sending=False)

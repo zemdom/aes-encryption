@@ -13,7 +13,6 @@ class SenderRSAKey:
         self.path_private_key = './test/private/private.pem'
         self.path_public_key = './test/public/public.pem'
 
-        # access_key = None
         self.encrypted_access_key = SHA256.new(data=access_key).digest()
 
         initial_vector = b'\x92\xc0\xf6$\xa8\xc4\x88b\x07x\xd3DG\xe5\x94\x1a'

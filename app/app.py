@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QMainWindow, QInputDialog, QLineEdit
 
-from app.TabsWidget import TabsWidget
+from app.tabs_widget import TabsWidget
 
 
 class App(QMainWindow):
@@ -12,11 +12,11 @@ class App(QMainWindow):
         super(QMainWindow, self).__init__()
         self.setWindowTitle("Data encryption project")
         self.resize(self.windowHeight, self.windowWidth)
-        self.__getPassword()
+        self.__get_password()
         self.setCentralWidget(TabsWidget(self.windowHeight, self.windowWidth))
         self.show()
 
-    def __getPassword(self):
+    def __get_password(self):
         password, ok = QInputDialog.getText(self, 'Password', 'Enter your password', QLineEdit.Password)
         if ok:
             self.password = password
