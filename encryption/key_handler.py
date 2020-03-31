@@ -10,11 +10,11 @@ class SenderKeyHandler:
         self.session_key = None
         self.encrypted_session_key = None
 
-    def handle_pretransmission(self, access_key):
+    def generate_sender_rsa_key(self, access_key):
         self.rsa_key = SenderRSAKey(access_key)
         self.rsa_key.create()
 
-    def handle_transmission(self, recipient_public_key):
+    def generate_sender_session_key(self, recipient_public_key):
         self.sender_session_key = SenderSessionKey(recipient_public_key)
         self.sender_session_key.create()
 

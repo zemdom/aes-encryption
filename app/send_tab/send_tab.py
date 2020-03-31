@@ -7,7 +7,9 @@ from app.send_tab.sub_tabs.text_subtab import TextSubTab
 
 
 class SendTab(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, output_queue, parent=None):
+        self.output_queue = output_queue
+
         super(QWidget, self).__init__(parent)
         self.__create_layout()
 
@@ -22,14 +24,14 @@ class SendTab(QWidget):
 
     def __init_receiver_input(self):
         layout = QHBoxLayout()
-        layout.addWidget(QLabel("Receiver:"))
+        layout.addWidget(QLabel('Receiver:'))
         self.receiver = QLineEdit()
         layout.addWidget(self.receiver)
         return layout
 
     def __init_cypher_method_select(self):
         layout = QHBoxLayout()
-        layout.addWidget(QLabel("Cypher mode:"))
+        layout.addWidget(QLabel('Cypher mode:'))
         self.cypher_mode = QComboBox(self)
         self.cypher_mode.addItems([mode.name for mode in BlockCypherMode])
         layout.addWidget(self.cypher_mode)
@@ -46,11 +48,11 @@ class SendTab(QWidget):
 
     def __init_file_subtab(self):
         self.file_sub_tab = FileSubTab(sending=True)
-        self.tabs.addTab(self.file_sub_tab, "File")
+        self.tabs.addTab(self.file_sub_tab, 'File')
 
     def __init_text_subtab(self):
         self.text_sub_tab = TextSubTab(sending=True)
-        self.tabs.addTab(self.text_sub_tab, "Text")
+        self.tabs.addTab(self.text_sub_tab, 'Text')
 
     def __init_footer(self):
         layout = QHBoxLayout()
@@ -60,24 +62,27 @@ class SendTab(QWidget):
 
     def __init_progress_bar(self, layout):
         self.progress_bar = QProgressBar(self)
-        layout.addWidget(QLabel("Sending progress:"))
+        layout.addWidget(QLabel('Sending progress:'))
         layout.addWidget(self.progress_bar)
 
     def __init_send_button(self, layout):
-        send_button = QPushButton("Send", self)
+        send_button = QPushButton('Send', self)
         send_button.clicked.connect(self.__send_message)
         layout.addWidget(send_button)
 
     def __send_message(self):
         if self.receiver.text() == '':
-            QMessageBox.warning(self, "Error", "Please specify receiver!")
+            QMessageBox.warning(self, 'Error', 'Please specify receiver!')
         if self.tabs.currentIndex() == 0:
-            print("Send encrypted text")
+            print('[GUI] Selected: send encrypted text')
             self.update_progress_bar(50)
+
+            self.output_queue.async_put(('INIT', self.receiver.text()))
+            self.output_queue.async_put(('INIT', self.text_sub_tab.text_message.toPlainText()))
             # encrypt(self.receiver.text(), self.cypher_mode.current_text(),
             # self.text_sub_tab.text_message.toPlainText()
         else:
-            print("Send encrypted file")
+            print('[GUI] Selected: send encrypted file')
             # encrypt(self.receiver.text(), self.cypher_mode.currentText(), self.file_sub_tab.file)
 
     def update_progress_bar(self, value):

@@ -3,18 +3,21 @@ import struct
 from config import SOCKET_HEADFORMAT, SOCKET_HEADLEN
 from encryption.aes import AESEncryption
 from encryption.key_handler import ReceiverKeyHandler, SenderKeyHandler
+from encryption.rsa_key import SenderRSAKey
 
 
 class MessageHandler:
-    def __init__(self, input_queue, output_queue, encrypt=True):
+    def __init__(self, input_queue, output_queue, connection_open, encrypt=True):
         self.input_queue = input_queue
         self.output_queue = output_queue
+
+        self.connection_open = connection_open
 
         self.aes = AESEncryption(input_queue, output_queue, encrypt)
         self.handlers = dict()
 
     async def start_mainloop(self):
-        while True:  # TODO
+        while self.connection_open[0]:
             input_data = await self.input_queue.async_get()
             output_data = self.dispatch_message(input_data)
             self.output_queue.async_put(output_data)
@@ -22,12 +25,15 @@ class MessageHandler:
     def dispatch_message(self, message):
         pass
 
+    def close(self):
+        self.connection_open[0] = False
+
 
 class SenderMessageHandler(MessageHandler):
-    def __init__(self, public_key, input_queue, output_queue, encrypt=True):
-        super().__init__(input_queue, output_queue, encrypt)
+    def __init__(self, input_queue, output_queue, connection_open, encrypt=True):
+        super().__init__(input_queue, output_queue, connection_open, encrypt)
 
-        self.key_handler = SenderKeyHandler(public_key)
+        self.key_handler = None
         self.handlers = dict(INIT=SenderMessageHandler.__init_handler, PKEY=SenderMessageHandler.__pkey_handler,
                              SKEY=SenderMessageHandler.__skey_handler, PARM=SenderMessageHandler.__parm_handler,
                              DATA=SenderMessageHandler.__data_handler,
@@ -40,6 +46,10 @@ class SenderMessageHandler(MessageHandler):
         return message
 
     def __init_handler(self, message_type, message_data):
+        rsa_key = SenderRSAKey(message_data)
+        rsa_key.create()
+
+        self.key_handler = SenderKeyHandler(rsa_key.public_key)
         return message_type, message_data
 
     def __pkey_handler(self, message_type, message_data):
@@ -56,6 +66,7 @@ class SenderMessageHandler(MessageHandler):
         return message_type, message_data
 
     def __quit_handler(self, message_type, message_data):
+        self.close()
         return message_type, message_data
 
     @staticmethod
@@ -71,10 +82,10 @@ class SenderMessageHandler(MessageHandler):
 
 
 class ReceiverMessageHandler(MessageHandler):
-    def __init__(self, private_key, input_queue, output_queue, encrypt=True):
-        super().__init__(input_queue, output_queue, encrypt)
+    def __init__(self, input_queue, output_queue, connection_open, encrypt=True):
+        super().__init__(input_queue, output_queue, connection_open, encrypt)
 
-        self.key_handler = ReceiverKeyHandler(private_key)
+        self.key_handler = None
         self.handlers = dict(INIT=ReceiverMessageHandler.__init_handler, PKEY=ReceiverMessageHandler.__pkey_handler,
                              SKEY=ReceiverMessageHandler.__skey_handler, PARM=ReceiverMessageHandler.__parm_handler,
                              DATA=ReceiverMessageHandler.__data_handler,
@@ -83,7 +94,7 @@ class ReceiverMessageHandler(MessageHandler):
     def dispatch_message(self, message):
         # message_type, message_data = self.handlers.get(message_type)(message_type, message_data)
         message_type, message_length, message_data = self.unpack_message(message)
-        message = self.handlers.get(message_type)
+        message = self.handlers.get(message_type)(self, message_data)
         return message
 
     def __init_handler(self, message_data):
