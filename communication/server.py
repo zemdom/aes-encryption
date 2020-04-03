@@ -9,7 +9,7 @@ class ServerProtocol(asyncio.Protocol):
         self.peername = None
         self.transport = None
 
-        # self.__connection_checker = asyncio.create_task(self.__check_connection_open())
+        # self.__create_check_connection_task()
 
     def connection_made(self, transport):
         self.peername = transport.get_extra_info('peername')
@@ -26,9 +26,3 @@ class ServerProtocol(asyncio.Protocol):
     def connection_lost(self, exc):
         print('[SERVER] Lost connection of {}'.format(self.peername))
         self.transport.close()
-
-    async def __check_connection_open(self):
-        while self.connection_open[0]:
-            continue
-        server_task = asyncio.current_task()
-        server_task.close()

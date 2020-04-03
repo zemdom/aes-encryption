@@ -1,6 +1,5 @@
-import asyncio
-
-from PyQt5.QtCore import QThread
+from PyQt5 import QtCore
+from PyQt5.QtCore import QThread, pyqtSignal, QObject
 from PyQt5.QtWidgets import QWidget, QHBoxLayout, QLabel, QLineEdit, QVBoxLayout, QTabWidget
 
 from app.send_tab.sub_tabs.file_subtab import FileSubTab
@@ -9,12 +8,19 @@ from app.send_tab.sub_tabs.text_subtab import TextSubTab
 
 class ReceiveTab(QWidget):
     def __init__(self, input_queue, parent=None):
-        self.input_queue = input_queue
-
         super(QWidget, self).__init__(parent)
         self.__create_layout()
 
-        self.thread = ReceiveThread(input_queue, self.text_sub_tab)
+        self.input_queue = input_queue
+
+        self.worker = ReceiveWorker(self.input_queue)
+        self.thread = QThread(self)
+        self.__init_receiving_thread()
+
+    def __init_receiving_thread(self):
+        self.worker.message_received.connect(self.__message_received)
+        self.worker.moveToThread(self.thread)
+        self.thread.started.connect(self.worker.run)
         self.thread.start()
 
     def __create_layout(self):
@@ -42,20 +48,24 @@ class ReceiveTab(QWidget):
         layout.addWidget(self.tabs)
         return layout
 
+    @QtCore.pyqtSlot(str)
+    def __message_received(self, message):
+        self.text_sub_tab.text_message.appendPlainText(message)
 
-class ReceiveThread(QThread):
-    def __init__(self, input_queue, text_field):
-        QThread.__init__(self)
+
+class ReceiveWorker(QObject):
+    message_received = pyqtSignal(str)
+
+    def __init__(self, input_queue):
+        QObject.__init__(self)
         self.input_queue = input_queue
-        self.text_field = text_field
+        self.running = True
 
+    @QtCore.pyqtSlot()
     def run(self):
-        asyncio.run(self.__get_messages())
+        while self.running:
+            message = self.input_queue.get()
+            self.message_received.emit(message)
 
-    async def __get_messages(self):
-        while True:  # TODO
-            message = await self.input_queue.async_get()
-            self.text_field.text_message.appendPlainText(message)
-
-    def __update_text_fields(self):
-        ...
+    def close(self):  # TODO never called
+        self.running = False
