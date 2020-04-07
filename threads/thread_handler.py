@@ -87,17 +87,16 @@ class SenderThreadHandler(ThreadHandler):
         host, port = address[0], address[1]
 
         while self.connection_open[0]:
-            message_sent = False
             message = await outgoing_data.async_get()
-            while not message_sent:
-                on_con_lost = loop.create_future()
-                transport, protocol = await loop.create_connection(lambda: SocketProtocol(message, on_con_lost),
-                                                                   host, port)
 
-                # wait until the protocol signals that the connection is lost and close the transport
-                try:
-                    await on_con_lost
-                    message_sent = on_con_lost.result()
-                    print('[{0}] Message sent: {1}'.format(self.name, message_sent))
-                finally:
-                    transport.close()
+            on_con_lost = loop.create_future()
+            transport, protocol = await loop.create_connection(lambda: SocketProtocol(message, on_con_lost),
+                                                               host, port)
+
+            # wait until the protocol signals that the connection is lost and close the transport
+            try:
+                await on_con_lost
+                message_sent = on_con_lost.result()
+                print('[{0}] Message sent: {1}'.format(self.name, message_sent))
+            finally:
+                transport.close()

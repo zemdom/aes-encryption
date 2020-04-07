@@ -11,6 +11,9 @@ class ReceiveTab(QWidget):
         super(QWidget, self).__init__(parent)
         self.__create_layout()
 
+        self.message_dispatchers = dict(INIT=ReceiveTab.__dispatch_init_message,
+                                        DATA=ReceiveTab.__dispatch_data_message,
+                                        QUIT=ReceiveTab.__dispatch_quit_message)
         self.input_queue = input_queue
 
         self.worker = ReceiveWorker(self.input_queue)
@@ -48,13 +51,30 @@ class ReceiveTab(QWidget):
         layout.addWidget(self.tabs)
         return layout
 
-    @QtCore.pyqtSlot(str)
+    def empty_content_tabs(self):
+        self.text_sub_tab.clear_text_message()
+        # TODO empty files tab
+
+    @QtCore.pyqtSlot(object)
     def __message_received(self, message):
-        self.text_sub_tab.text_message.appendPlainText(message)
+        self.__dispatch_message(*message)
+
+    def __dispatch_message(self, message_type, message_data):
+        self.message_dispatchers.get(message_type)(self, message_data)
+
+    def __dispatch_init_message(self, message):
+        self.sender.setText(message)
+
+    def __dispatch_data_message(self, message):
+        self.text_sub_tab.append_text_message(message)
+
+    def __dispatch_quit_message(self, message):
+        self.sender.clear()
+        self.empty_content_tabs()
 
 
 class ReceiveWorker(QObject):
-    message_received = pyqtSignal(str)
+    message_received = pyqtSignal(object)
 
     def __init__(self, input_queue):
         QObject.__init__(self)

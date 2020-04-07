@@ -1,4 +1,4 @@
-from PyQt5.QtCore import QRegExp
+from PyQt5.QtCore import QRegExp, pyqtSignal
 from PyQt5.QtGui import QRegExpValidator
 from PyQt5.QtWidgets import QWidget, QPushButton, QHBoxLayout, QVBoxLayout, QLabel, QLineEdit, QComboBox, QTabWidget, \
     QMessageBox, QProgressBar
@@ -9,6 +9,9 @@ from app.send_tab.sub_tabs.text_subtab import TextSubTab
 
 
 class SendTab(QWidget):
+    connection_requested = pyqtSignal(str)
+    connection_closed = pyqtSignal()
+
     def __init__(self, output_queue, parent=None):
         self.output_queue = output_queue
 
@@ -31,7 +34,7 @@ class SendTab(QWidget):
         layout.addWidget(self.receiver_label)
         layout.addWidget(self.__create_receiver_text_input())
         self.connect_button = QPushButton("Connect")
-        self.connect_button.clicked.connect(self.__menage_connection)
+        self.connect_button.clicked.connect(self.__manage_connection)
         layout.addWidget(self.connect_button)
         return layout
 
@@ -100,18 +103,26 @@ class SendTab(QWidget):
             print('[GUI] Selected: send encrypted text')
             self.update_progress_bar(50)
 
-            self.output_queue.async_put(('INIT', self.receiver.text()))
-            self.output_queue.async_put(('INIT', self.text_sub_tab.text_message.toPlainText()))
+            # self.output_queue.async_put(('PARM', self.cypher_mode.currentText()))
+            self.output_queue.async_put(('DATA', self.text_sub_tab.text_message.toPlainText()))
+            self.__empty_text_subtab()
             # encrypt(self.receiver.text(), self.cypher_mode.current_text(),
             # self.text_sub_tab.text_message.toPlainText()
         else:
             print('[GUI] Selected: send encrypted file')
             # encrypt(self.receiver.text(), self.cypher_mode.currentText(), self.file_sub_tab.file)
+            self.__empty_file_subtab()
+
+    def __empty_text_subtab(self):
+        self.text_sub_tab.clear_text_message()
+
+    def __empty_file_subtab(self):
+        ...
 
     def update_progress_bar(self, value):
         self.progress_bar.setValue(value)
 
-    def __menage_connection(self):
+    def __manage_connection(self):
         if not self.__is_receiver_filled() or not self.receiver.hasAcceptableInput():
             QMessageBox.warning(self, "Validation error",
                                 "Receiver should be specified as IP address and port. For example: 127.0.0.1:2137")
@@ -130,8 +141,13 @@ class SendTab(QWidget):
         self.receiver_label.setDisabled(self.connected)
         if self.connected:
             self.connect_button.setText("Disconnect")
+            self.connection_requested.emit(self.receiver.text())
+            self.output_queue.async_put(('INIT', self.receiver.text()))
+            self.output_queue.async_put(('INIT', self.receiver.text()))
         else:
             self.connect_button.setText("Connect")
+            self.output_queue.async_put(('QUIT', self.receiver.text()))
+            self.connection_closed.emit()
 
     def __is_receiver_filled(self):
         return self.receiver.text() is not None and self.receiver.text() != ""

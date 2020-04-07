@@ -22,7 +22,7 @@ class MessageHandler:
             self.output_queue.async_put(output_data)
 
     def dispatch_message(self, message):
-        pass
+        raise NotImplementedError
 
 
 class SenderMessageHandler(MessageHandler):
@@ -42,6 +42,7 @@ class SenderMessageHandler(MessageHandler):
         return message
 
     def __init_handler(self, message_type, message_data):
+
         return message_type, message_data
 
     def __pkey_handler(self, message_type, message_data):
@@ -84,31 +85,26 @@ class ReceiverMessageHandler(MessageHandler):
 
     def dispatch_message(self, message):
         message_type, message_length, message_data = self.__unpack_message(message)
-        message = self.handlers.get(message_type)(self, message_data)
+        message = self.handlers.get(message_type)(self, message_type, message_data)
         return message
 
-    def __init_handler(self, message_data):
-        return message_data
+    def __init_handler(self, message_type, message_data):
+        return message_type, message_data
 
-    def __pkey_handler(self, message_data):
-        message = message_data
-        return message
+    def __pkey_handler(self, message_type, message_data):
+        return message_type, message_data
 
-    def __skey_handler(self, message_data):
-        message = message_data
-        return message
+    def __skey_handler(self, message_type, message_data):
+        return message_type, message_data
 
-    def __parm_handler(self, message_data):
-        message = message_data
-        return message
+    def __parm_handler(self, message_type, message_data):
+        return message_type, message_data
 
-    def __data_handler(self, message_data):
-        message = message_data
-        return message
+    def __data_handler(self, message_type, message_data):
+        return message_type, message_data
 
-    def __quit_handler(self, message_data):
-        message = message_data
-        return message
+    def __quit_handler(self, message_type, message_data):
+        return message_type, message_data
 
     @staticmethod
     def __unpack_message(message_data):

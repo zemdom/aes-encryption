@@ -9,3 +9,9 @@ class TextSubTab(QWidget):
         self.text_message.setDisabled(not sending)
         layout.addWidget(self.text_message)
         self.setLayout(layout)
+
+    def append_text_message(self, message):
+        self.text_message.appendPlainText(message)
+
+    def clear_text_message(self):
+        self.text_message.clear()
