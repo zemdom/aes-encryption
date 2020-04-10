@@ -9,13 +9,13 @@ class SocketProtocol(asyncio.Protocol):
 
     def connection_made(self, transport):
         transport.write(self.message)
-        # transport.write(self.message.encode())
-        print('[SOCKET] Data sent: {!r}'.format(self.message))
+        print(f'[SOCKET] Data sent: {self.message!r}')
 
     def data_received(self, data):
         message = data.decode()
-        print('[SOCKET] Data received: {!r}'.format(data.decode()))
+        print(f'[SOCKET] Data received: {message!r}')
 
+        # TODO
         if message == 'ACK0':
             self.ack_received = True
 

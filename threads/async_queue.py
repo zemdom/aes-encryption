@@ -25,10 +25,11 @@ class AsyncQueue(_PySimpleQueue):
     def async_put(self, data):
         self.put(data)
 
-    def async_clear(self):
-        while not self.empty():
-            self.get_nowait()
-        pass
+    # TODO
+    # def async_clear(self):
+    #     while not self.empty():
+    #         self.get_nowait()
+    #     pass
 
     def async_empty(self):
         while not self.empty():

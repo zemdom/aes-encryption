@@ -12,6 +12,9 @@ class ReceiveTab(QWidget):
         self.__create_layout()
 
         self.message_dispatchers = dict(INIT=ReceiveTab.__dispatch_init_message,
+                                        PKEY=ReceiveTab.__mock,
+                                        SKEY=ReceiveTab.__mock,
+                                        PARM=ReceiveTab.__mock,
                                         DATA=ReceiveTab.__dispatch_data_message,
                                         QUIT=ReceiveTab.__dispatch_quit_message)
         self.input_queue = input_queue
@@ -71,6 +74,10 @@ class ReceiveTab(QWidget):
     def __dispatch_quit_message(self, message):
         self.sender.clear()
         self.empty_content_tabs()
+
+    # TODO remove
+    def __mock(self, message):
+        pass
 
 
 class ReceiveWorker(QObject):

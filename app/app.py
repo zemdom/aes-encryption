@@ -1,10 +1,10 @@
-from PyQt5.QtWidgets import QMainWindow, QInputDialog, QLineEdit, QMessageBox, QApplication
+from PyQt5.QtWidgets import QMainWindow, QInputDialog, QLineEdit, QMessageBox
 
 from app.tabs_widget import TabsWidget
 from threads.async_queue import AsyncQueue
 from threads.thread_handler import SenderThreadHandler, ReceiverThreadHandler
 
-from encryption.rsa_key import SenderRSAKey
+from encryption.keys.rsa_key import SenderRSAKey
 
 
 class App(QMainWindow):
@@ -13,11 +13,9 @@ class App(QMainWindow):
 
     def __init__(self):
         super(QMainWindow, self).__init__()
-        # self.input_queue = AsyncQueue()
-        # self.output_queue = AsyncQueue()
-
         self.input_queue = None
         self.output_queue = None
+        self.shared_data = None
 
         self.rsa_key = None
         self.receiver_port = 55555
@@ -46,17 +44,19 @@ class App(QMainWindow):
 
         self.input_queue = AsyncQueue()
         self.output_queue = AsyncQueue()
+        self.shared_data = AsyncQueue()
 
         self.receiver_thread_handler = ReceiverThreadHandler()
-        self.receiver_thread_handler.create(self.rsa_key.private_key, self.input_queue, self.receiver_port)
+        self.receiver_thread_handler.create(self.rsa_key.private_key, self.input_queue, self.shared_data,
+                                            self.receiver_port)
 
     def __start_connection(self, address):
         host, port = address.split(':')
         self.sender_thread_handler = SenderThreadHandler()
-        self.sender_thread_handler.create(self.rsa_key.public_key, self.output_queue, (host, port))
+        self.sender_thread_handler.create(self.rsa_key.public_key, self.output_queue, self.shared_data, (host, port))
 
     def __close_connection(self):
-        self.output_queue.async_empty()
+        # self.output_queue.async_empty()
         self.sender_thread_handler.close()
         # self.sender_thread_handler.thread.join()  # TODO
         # self.receiver_thread.join()    # TODO

@@ -9,20 +9,18 @@ class ServerProtocol(asyncio.Protocol):
         self.peername = None
         self.transport = None
 
-        # self.__create_check_connection_task()
-
     def connection_made(self, transport):
         self.peername = transport.get_extra_info('peername')
-        print('[SERVER] Connection from {}'.format(self.peername))
+        print(f'[SERVER] Connection from {self.peername}')
         self.transport = transport
 
     def data_received(self, data):
-        print('[SERVER] Data received: {!r}'.format(data))
+        print(f'[SERVER] Data received: {data!r}')
         self.ingoing_data.put(data)
 
         self.transport.write('ACK0'.encode())  # TODO
         self.transport.close()
 
     def connection_lost(self, exc):
-        print('[SERVER] Lost connection of {}'.format(self.peername))
+        print(f'[SERVER] Lost connection of {self.peername}')
         self.transport.close()

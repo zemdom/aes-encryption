@@ -3,7 +3,7 @@ from PyQt5.QtGui import QRegExpValidator
 from PyQt5.QtWidgets import QWidget, QPushButton, QHBoxLayout, QVBoxLayout, QLabel, QLineEdit, QComboBox, QTabWidget, \
     QMessageBox, QProgressBar
 
-from encryption.block_cypher_mode import BlockCypherMode
+from config import BLOCK_CIPHER_MODE
 from app.send_tab.sub_tabs.file_subtab import FileSubTab
 from app.send_tab.sub_tabs.text_subtab import TextSubTab
 
@@ -54,7 +54,7 @@ class SendTab(QWidget):
         layout.addWidget(self.cypher_mode_label)
         self.cypher_mode = QComboBox(self)
         self.cypher_mode.setDisabled(True)
-        self.cypher_mode.addItems([mode.name for mode in BlockCypherMode])
+        self.cypher_mode.addItems([mode.name for mode in BLOCK_CIPHER_MODE])
         layout.addWidget(self.cypher_mode)
         return layout
 
@@ -103,11 +103,9 @@ class SendTab(QWidget):
             print('[GUI] Selected: send encrypted text')
             self.update_progress_bar(50)
 
-            # self.output_queue.async_put(('PARM', self.cypher_mode.currentText()))
+            self.output_queue.async_put(('PARM', self.cypher_mode.currentText()))
             self.output_queue.async_put(('DATA', self.text_sub_tab.text_message.toPlainText()))
             self.__empty_text_subtab()
-            # encrypt(self.receiver.text(), self.cypher_mode.current_text(),
-            # self.text_sub_tab.text_message.toPlainText()
         else:
             print('[GUI] Selected: send encrypted file')
             # encrypt(self.receiver.text(), self.cypher_mode.currentText(), self.file_sub_tab.file)
@@ -143,7 +141,8 @@ class SendTab(QWidget):
             self.connect_button.setText("Disconnect")
             self.connection_requested.emit(self.receiver.text())
             self.output_queue.async_put(('INIT', self.receiver.text()))
-            self.output_queue.async_put(('INIT', self.receiver.text()))
+            self.output_queue.async_put(('PKEY', 'null'))
+            self.output_queue.async_put(('SKEY', 'null'))
         else:
             self.connect_button.setText("Connect")
             self.output_queue.async_put(('QUIT', self.receiver.text()))

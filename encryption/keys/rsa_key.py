@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 
 from Cryptodome.Cipher import AES
 from Cryptodome.Hash import SHA256
@@ -14,13 +14,19 @@ class SenderRSAKey:
         self.public_key = None
         self.encrypted_private_key = None
         self.encrypted_public_key = None
-        self.path_private_key = './../test/private/private.pem'
-        self.path_public_key = './../test/public/public.pem'
+
+        self.path_private_key = './../test/private/'
+        self.private_key_filename = 'private.pem'
+        self.full_path_private_key = self.path_private_key + self.private_key_filename
+
+        self.path_public_key = './../test/public/'
+        self.public_key_filename = 'public.pem'
+        self.full_path_public_key = self.path_public_key + self.public_key_filename
 
         access_key = access_key.encode()
         self.encrypted_access_key = SHA256.new(data=access_key).digest()
 
-        initial_vector = b'\x92\xc0\xf6$\xa8\xc4\x88b\x07x\xd3DG\xe5\x94\x1a'
+        initial_vector = b'\x92\xc0\xf6$\xa8\xc4\x88b\x07x\xd3DG\xe5\x94\x1a'  # TODO
         self.cipher = AES.new(self.encrypted_access_key, AES.MODE_CBC, iv=initial_vector)
 
     def __generate_key(self):
@@ -44,18 +50,22 @@ class SenderRSAKey:
 
     def __store_key(self):
         if self.encrypted_private_key and self.encrypted_public_key:
-            with open(self.path_private_key, 'wb+') as file_out:
+            # create path to file if it does not exist
+            Path(self.path_private_key).mkdir(parents=True, exist_ok=True)
+            with open(self.full_path_private_key, 'wb+') as file_out:
                 file_out.write(self.encrypted_private_key)
 
-            with open(self.path_public_key, 'wb+') as file_out:
+            # create path to file if it does not exist
+            Path(self.path_public_key).mkdir(parents=True, exist_ok=True)
+            with open(self.full_path_public_key, 'wb+') as file_out:
                 file_out.write(self.encrypted_public_key)
 
     def __load_key(self):
         try:
-            with open(self.path_private_key, 'rb') as file_in:
+            with open(self.full_path_private_key, 'rb') as file_in:
                 self.encrypted_private_key = file_in.read()
 
-            with open(self.path_public_key, 'rb') as file_in:
+            with open(self.full_path_public_key, 'rb') as file_in:
                 self.encrypted_public_key = file_in.read()
         except IOError:
             return False
