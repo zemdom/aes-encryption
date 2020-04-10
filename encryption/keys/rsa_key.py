@@ -48,16 +48,31 @@ class SenderRSAKey:
             self.private_key = self.cipher.decrypt(self.encrypted_private_key)
             self.public_key = self.cipher.decrypt(self.encrypted_public_key)
 
+            self.private_key = DataHandler.remove_padding(self.private_key)
+            self.public_key = DataHandler.remove_padding(self.public_key)
+
+            self.__check_if_correct_access_key()
+
+    def __check_if_correct_access_key(self):
+        try:
+            # check if keys were decrypted correctly
+            RSA.import_key(self.private_key)
+            RSA.import_key(self.public_key)
+        except ValueError:
+            # if access key was incorrect, generate unrelated private and public keys
+            self.private_key = RSA.generate(2048).export_key('PEM')
+            self.public_key = RSA.generate(2048).publickey().export_key('PEM')
+
     def __store_key(self):
         if self.encrypted_private_key and self.encrypted_public_key:
             # create path to file if it does not exist
             Path(self.path_private_key).mkdir(parents=True, exist_ok=True)
-            with open(self.full_path_private_key, 'wb+') as file_out:
+            with open(self.full_path_private_key, 'wb') as file_out:
                 file_out.write(self.encrypted_private_key)
 
             # create path to file if it does not exist
             Path(self.path_public_key).mkdir(parents=True, exist_ok=True)
-            with open(self.full_path_public_key, 'wb+') as file_out:
+            with open(self.full_path_public_key, 'wb') as file_out:
                 file_out.write(self.encrypted_public_key)
 
     def __load_key(self):

@@ -2,6 +2,7 @@ from Cryptodome.Random import get_random_bytes
 from Cryptodome.Cipher import AES
 
 from config import BLOCK_CIPHER_MODE
+from encryption.data_handler import DataHandler
 
 
 class AESEncryption:
@@ -9,6 +10,7 @@ class AESEncryption:
         self.input_queue = input_queue
         self.output_queue = output_queue
         self.encode = encode
+        self.padding = False
         # self.key_size = ...
         self.session_key = None
         # self.block_size = BLOCK_SIZE
@@ -22,18 +24,22 @@ class AESEncryption:
     # data length has to be a multiple of a block size
     def __set_ecb_mode(self):
         self.cipher = AES.new(self.session_key, AES.MODE_ECB)
+        self.padding = True
 
     # data length has to be a multiple of a block size
     def __set_cbc_mode(self):
         self.cipher = AES.new(self.session_key, AES.MODE_CBC, iv=self.initial_vector)
+        self.padding = True
 
     # accepts data of any length
     def __set_cfb_mode(self):
         self.cipher = AES.new(self.session_key, AES.MODE_CFB, iv=self.initial_vector)
+        self.padding = False
 
     # accepts data of any length
     def __set_ofb_mode(self):
         self.cipher = AES.new(self.session_key, AES.MODE_OFB, iv=self.initial_vector)
+        self.padding = False
 
     def create(self, cipher_mode, initial_vector=None):
         if self.encode:
@@ -45,18 +51,30 @@ class AESEncryption:
 
     def use(self, data):
         if self.encode:
-            return self.__encrypt(data)
+            data = DataHandler.add_padding(data) if self.padding else data
+            data = self.__encrypt(data)
+            return data
         else:
-            return self.__decrypt(data)
-
-    """return: ciphertext: bytes"""
+            data = self.__decrypt(data)
+            data = DataHandler.remove_padding(data) if self.padding else data
+            return data
 
     def __encrypt(self, data):
+        """
+
+        :param bytes data:
+        :return: ciphertext
+        :rtype: bytes
+        """
         if self.cipher:
             return self.cipher.encrypt(data)
 
-    """return: plaintext: bytes"""
-
     def __decrypt(self, encrypted_data):
+        """
+
+        :param bytes encrypted_data:
+        :return: plaintext
+        :rtype: bytes
+        """
         if self.cipher:
             return self.cipher.decrypt(encrypted_data)

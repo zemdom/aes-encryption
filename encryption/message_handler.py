@@ -37,10 +37,13 @@ class SenderMessageHandler(MessageHandler):
                              DATA=SenderMessageHandler.__data_handler,
                              QUIT=SenderMessageHandler.__quit_handler)  # {message_type : handler_function}
 
-    """params: message: str
-        return: message: bytes"""
-
     async def dispatch_message(self, message):
+        """
+
+        :param str message:
+        :return: message
+        :rtype: bytes
+        """
         (message_type, message_data) = message
         message_type, message_data = await self.handlers.get(message_type)(self, message_type, message_data)
         message = self.__pack_message(message_type, message_data)
@@ -65,6 +68,7 @@ class SenderMessageHandler(MessageHandler):
         cipher_mode = message_data
         self.aes.create(cipher_mode)
         message_data = self.__pack_parameters(message_data)
+        # TODO encrypt message_data
         return message_type, message_data
 
     async def __data_handler(self, message_type, message_data):
@@ -76,10 +80,13 @@ class SenderMessageHandler(MessageHandler):
         message_data = message_data.encode()
         return message_type, message_data
 
-    """"params: cipher_mode: str
-         return: parameters: bytes"""
-
     def __pack_parameters(self, cipher_mode):
+        """
+
+        :param str cipher_mode:
+        :return: parameters
+        :rtype: bytes
+        """
         algorithm_type = 0  # aes algorithm
         algorithm_type = f'{algorithm_type:0{PARM_ALG_TYPE_LEN}b}'
 
@@ -98,11 +105,15 @@ class SenderMessageHandler(MessageHandler):
         parameters = parameters + initial_vector
         return parameters
 
-    """params: message_type: str, message_data: bytes
-        return message: bytes"""
-
     @staticmethod
     def __pack_message(message_type, message_data):
+        """
+
+        :param str message_type:
+        :param bytes message_data:
+        :return: message
+        :rtype: bytes
+        """
         message_length = len(message_data)
         message_type = message_type.encode()
 
@@ -122,10 +133,13 @@ class ReceiverMessageHandler(MessageHandler):
                              DATA=ReceiverMessageHandler.__data_handler,
                              QUIT=ReceiverMessageHandler.__quit_handler)  # {message_type : handler_function}
 
-    """params: message: bytes
-        return: message: str"""
-
     async def dispatch_message(self, message):
+        """
+
+        :param bytes message:
+        :return: message
+        :rtype: str
+        """
         message_type, message_length, message_data = self.__unpack_message(message)
         message = await self.handlers.get(message_type)(self, message_type, message_data)
         return message
@@ -146,6 +160,7 @@ class ReceiverMessageHandler(MessageHandler):
         return message_type, message_data
 
     async def __parm_handler(self, message_type, message_data):
+        # TODO decrypt message_data
         parameters = self.__unpack_parameters(message_data)
         algorithm_type, session_key_size, block_size, cipher_mode, initial_vector = parameters
         self.key_handler.sender_session_key_handler.create(session_key_size)
@@ -156,18 +171,21 @@ class ReceiverMessageHandler(MessageHandler):
 
     async def __data_handler(self, message_type, message_data):
         message_data = self.aes.use(message_data)
-        message_data = message_data.decode()
+        message_data = message_data.decode(errors='ignore')  # in case of random data, continue decoding without notice
         return message_type, message_data
 
     async def __quit_handler(self, message_type, message_data):
         message_data = ''
         return message_type, message_data
 
-    """params: message_data: bytes
-        return: algorithm_type: int, session_key_size: int, block_size: int, cipher_mode: str, initial_vector: bytes"""
-
     @staticmethod
     def __unpack_parameters(message_data):
+        """
+
+        :param bytes message_data:
+        :return: (algorithm_type, session_key_size, block_size, cipher_mode, initial_vector)
+        :rtype: (int, int, int, str, bytes)
+        """
         parameters = int.from_bytes(message_data[:PARM_LEN], byteorder='little')
         parameters = f'{parameters:0{PARM_LEN * 8}b}'
 
@@ -187,11 +205,14 @@ class ReceiverMessageHandler(MessageHandler):
         initial_vector = message_data[PARM_LEN:]
         return algorithm_type, session_key_size, block_size, cipher_mode, initial_vector
 
-    """params: message_data: bytes
-        return message_type: str, message_length: int, message_data: bytes"""
-
     @staticmethod
     def __unpack_message(message_data):
+        """
+
+        :param bytes message_data:
+        :return: (message_type, message_length, message_data)
+        :rtype: (str, int, bytes)
+        """
         message_type, message_length = struct.unpack(f'!{SOCKET_HEADFORMAT}', message_data[:SOCKET_HEADLEN])
         message_data = struct.unpack(f'!{message_length}s', message_data[SOCKET_HEADLEN:])[0]
         message_type = message_type.decode()

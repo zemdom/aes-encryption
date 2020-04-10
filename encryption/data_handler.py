@@ -10,7 +10,12 @@ class DataHandler:
 
     @staticmethod
     def remove_padding(data):
-        return unpad(data, block_size=BLOCK_SIZE)
+        try:
+            transformed_data = unpad(data, block_size=BLOCK_SIZE)
+        except ValueError:
+            # when padding cannot be removed, sender entered incorrect access key and the data is random
+            transformed_data = data  # return the random data
+        return transformed_data
 
     def __divide(self, data):
         ...
