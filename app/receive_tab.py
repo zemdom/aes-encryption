@@ -7,17 +7,19 @@ from app.send_tab.sub_tabs.text_subtab import TextSubTab
 
 
 class ReceiveTab(QWidget):
+    received_connection_request = pyqtSignal(str)
+
     def __init__(self, input_queue, parent=None):
         super(QWidget, self).__init__(parent)
         self.__create_layout()
 
+        self.input_queue = input_queue
         self.message_dispatchers = dict(INIT=ReceiveTab.__dispatch_init_message,
                                         PKEY=ReceiveTab.__mock,
                                         SKEY=ReceiveTab.__mock,
                                         PARM=ReceiveTab.__mock,
                                         DATA=ReceiveTab.__dispatch_data_message,
                                         QUIT=ReceiveTab.__dispatch_quit_message)
-        self.input_queue = input_queue
 
         self.worker = ReceiveWorker(self.input_queue)
         self.thread = QThread(self)
@@ -54,6 +56,7 @@ class ReceiveTab(QWidget):
         layout.addWidget(self.tabs)
         return layout
 
+    @QtCore.pyqtSlot()
     def empty_content_tabs(self):
         self.text_sub_tab.clear_text_message()
         # TODO empty files tab
@@ -66,7 +69,9 @@ class ReceiveTab(QWidget):
         self.message_dispatchers.get(message_type)(self, message_data)
 
     def __dispatch_init_message(self, message):
-        self.sender.setText(message)
+        host, _ = message.split(':')
+        self.sender.setText(host)
+        self.received_connection_request.emit(message)
 
     def __dispatch_data_message(self, message):
         self.text_sub_tab.append_text_message(message)
@@ -74,8 +79,9 @@ class ReceiveTab(QWidget):
     def __dispatch_quit_message(self, message):
         self.sender.clear()
         self.empty_content_tabs()
+        self.received_connection_request.emit('')
 
-    # TODO remove
+    # TODO
     def __mock(self, message):
         pass
 
@@ -86,13 +92,9 @@ class ReceiveWorker(QObject):
     def __init__(self, input_queue):
         QObject.__init__(self)
         self.input_queue = input_queue
-        self.running = True
 
     @QtCore.pyqtSlot()
     def run(self):
-        while self.running:
-            message = self.input_queue.get()
+        while True:
+            message = self.input_queue.sync_get()
             self.message_received.emit(message)
-
-    def close(self):  # TODO never called
-        self.running = False

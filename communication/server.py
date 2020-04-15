@@ -16,7 +16,7 @@ class ServerProtocol(asyncio.Protocol):
 
     def data_received(self, data):
         print(f'[SERVER] Data received: {data!r}')
-        self.ingoing_data.put(data)
+        self.ingoing_data.sync_put(data)
 
         self.transport.write('ACK0'.encode())  # TODO
         self.transport.close()

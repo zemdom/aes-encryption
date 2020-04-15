@@ -5,17 +5,17 @@ from app.app import App
 
 
 def run_gui():
+    receiver_port = sys.argv[1]
     app = QApplication(sys.argv)
-    ex = App()
+    ex = App(receiver_port)
     ex.show()
-    # sys.exit(app.exec_())
     app.exec_()
     print('[GUI] GUI closed')
 
 
 def main():
     run_gui()
-    os._exit(0)  # TODO
+    os._exit(0)
 
 
 if __name__ == '__main__':

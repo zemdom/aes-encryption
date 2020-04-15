@@ -1,3 +1,5 @@
+import asyncio
+import socket
 import struct
 
 from config import SOCKET_HEADFORMAT, SOCKET_HEADLEN, BLOCK_SIZE, SESSION_KEY_SIZES, PARM_ALG_TYPE_LEN, \
@@ -14,21 +16,22 @@ class MessageHandler:
 
         self.connection_open = connection_open
 
-        self.aes = AESEncryption(input_queue, output_queue, encrypt)
+        self.aes = AESEncryption(encrypt)
         self.handlers = dict()
 
     async def start_mainloop(self):
         while self.connection_open[0]:  # TODO
             input_data = await self.input_queue.async_get()
             output_data = await self.dispatch_message(input_data)
-            self.output_queue.async_put(output_data)
+            self.output_queue.sync_put(output_data)
 
     def dispatch_message(self, message):
         raise NotImplementedError
 
 
 class SenderMessageHandler(MessageHandler):
-    def __init__(self, public_key, input_queue, output_queue, shared_data, connection_open, encrypt=True):
+    def __init__(self, public_key, input_queue, output_queue, shared_data, port, connection_open, encrypt=True):
+        shared_data.create(asyncio.get_running_loop())
         super().__init__(input_queue, output_queue, shared_data, connection_open, encrypt)
 
         self.key_handler = SenderKeyHandler(public_key)
@@ -36,6 +39,7 @@ class SenderMessageHandler(MessageHandler):
                              SKEY=SenderMessageHandler.__skey_handler, PARM=SenderMessageHandler.__parm_handler,
                              DATA=SenderMessageHandler.__data_handler,
                              QUIT=SenderMessageHandler.__quit_handler)  # {message_type : handler_function}
+        self.port = port
 
     async def dispatch_message(self, message):
         """
@@ -50,7 +54,9 @@ class SenderMessageHandler(MessageHandler):
         return message
 
     async def __init_handler(self, message_type, message_data):
-        message_data = message_data.split(':')[0].encode()
+        host_address = socket.gethostbyname(socket.gethostname())
+        message_data = f'{host_address}:{self.port}'
+        message_data = message_data.encode()
         return message_type, message_data
 
     async def __pkey_handler(self, message_type, message_data):
@@ -149,7 +155,7 @@ class ReceiverMessageHandler(MessageHandler):
         return message_type, message_data
 
     async def __pkey_handler(self, message_type, message_data):
-        self.shared_data.async_put(message_data)
+        self.shared_data.sync_put(message_data)
         message_data = ''
         return message_type, message_data
 

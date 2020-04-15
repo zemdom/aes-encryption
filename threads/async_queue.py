@@ -1,36 +1,49 @@
 import asyncio
+import janus
 from functools import wraps, partial
-from queue import _PySimpleQueue
+from threading import Event
 
 
 def asynchronous(func):
     @wraps(func)
     async def run(*args, loop=None, executor=None, **kwargs):
         if loop is None:
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
         pfunc = partial(func, *args, **kwargs)
         return await loop.run_in_executor(executor, pfunc)
 
     return run
 
 
-class AsyncQueue(_PySimpleQueue):
+class AsyncQueue(janus.Queue):
     def __init__(self):
-        super().__init__()
+        self.loop = None
+        self.created = Event()
+        self.created.clear()
 
-    @asynchronous
-    def async_get(self):
-        return self.get()
+    def create(self, loop):
+        if not self.created.is_set():
+            self.created.set()
+            self.loop = loop
+            super().__init__(maxsize=0, loop=self.loop)
 
-    def async_put(self, data):
-        self.put(data)
+    def sync_get(self):
+        self.__sync_wait_until_created()
+        return self.sync_q.get()
 
-    # TODO
-    # def async_clear(self):
-    #     while not self.empty():
-    #         self.get_nowait()
-    #     pass
+    def __sync_wait_until_created(self):
+        self.created.wait()
 
-    def async_empty(self):
-        while not self.empty():
-            continue
+    async def async_get(self):
+        await self.__async_wait_until_created()
+        return await self.async_q.get()
+
+    async def __async_wait_until_created(self):
+        await asynchronous(self.__sync_wait_until_created)()
+
+    def sync_put(self, data):
+        self.__sync_wait_until_created()
+        self.sync_q.put(data)
+
+    def close(self):
+        self.created.clear()
