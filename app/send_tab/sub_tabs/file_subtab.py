@@ -30,6 +30,7 @@ class FileSubTab(QWidget):
         if dlg.exec_():
             selected_files = dlg.selectedFiles()
             self.file = open(selected_files[0], 'rb')
+            self.on_file_change()
 
     def __init_receive_layout(self):
         layout = QHBoxLayout()

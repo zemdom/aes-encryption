@@ -70,7 +70,7 @@ class ReceiverThreadHandler(ThreadHandler):
                                       encrypt=False)
 
     async def _create_connection(self, loop, ingoing_data, port):
-        server = await loop.create_server(lambda: ServerProtocol(ingoing_data, self.connection_open), '127.0.0.1', port)
+        server = await loop.create_server(lambda: ServerProtocol(ingoing_data, self.connection_open), '', port)
 
         async with server:
             await server.serve_forever()
