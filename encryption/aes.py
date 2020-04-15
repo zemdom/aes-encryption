@@ -6,9 +6,7 @@ from encryption.data_handler import DataHandler
 
 
 class AESEncryption:
-    def __init__(self, input_queue, output_queue, encode=True):
-        self.input_queue = input_queue
-        self.output_queue = output_queue
+    def __init__(self, encode=True):
         self.encode = encode
         self.padding = False
         # self.key_size = ...

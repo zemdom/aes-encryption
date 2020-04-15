@@ -10,7 +10,9 @@ class TabsWidget(QWidget):
         self.send_tab = None
         self.receive_tab = None
         tabs = self.__create_tabs(height, width, input_queue, output_queue)
+
         self.send_tab.connection_closed.connect(self.receive_tab.empty_content_tabs)
+        self.receive_tab.received_connection_request.connect(self.send_tab.manage_connection)
 
         layout = QVBoxLayout(self)
         layout.addWidget(tabs)

@@ -1,4 +1,5 @@
-from PyQt5.QtCore import QRegExp, pyqtSignal
+from PyQt5 import QtCore
+from PyQt5.QtCore import QRegExp, pyqtSignal, QObject, QThread
 from PyQt5.QtGui import QRegExpValidator
 from PyQt5.QtWidgets import QWidget, QPushButton, QHBoxLayout, QVBoxLayout, QLabel, QLineEdit, QComboBox, QTabWidget, \
     QMessageBox, QProgressBar
@@ -11,13 +12,24 @@ from app.send_tab.sub_tabs.text_subtab import TextSubTab
 class SendTab(QWidget):
     connection_requested = pyqtSignal(str)
     connection_closed = pyqtSignal()
+    message_sent = pyqtSignal(object)
 
     def __init__(self, output_queue, parent=None):
-        self.output_queue = output_queue
-
         super(QWidget, self).__init__(parent)
-        self.connected = False
         self.__create_layout()
+
+        self.connected = False
+        self.connection_initiator = False
+
+        self.output_queue = output_queue
+        self.worker = SendWorker(self.output_queue)
+        self.thread = QThread(self)
+        self.__init_sending_thread()
+
+    def __init_sending_thread(self):
+        self.message_sent.connect(self.worker.message_sent)
+        self.worker.moveToThread(self.thread)
+        self.thread.start()
 
     def __create_layout(self):
         vertical_layout = QVBoxLayout()
@@ -34,7 +46,7 @@ class SendTab(QWidget):
         layout.addWidget(self.receiver_label)
         layout.addWidget(self.__create_receiver_text_input())
         self.connect_button = QPushButton("Connect")
-        self.connect_button.clicked.connect(self.__manage_connection)
+        self.connect_button.clicked.connect(self.__manage_connection_input)
         layout.addWidget(self.connect_button)
         return layout
 
@@ -101,10 +113,9 @@ class SendTab(QWidget):
             QMessageBox.warning(self, 'Error', 'Please specify receiver!')
         if self.tabs.currentIndex() == 0:
             print('[GUI] Selected: send encrypted text')
-            self.update_progress_bar(50)
 
-            self.output_queue.async_put(('PARM', self.cypher_mode.currentText()))
-            self.output_queue.async_put(('DATA', self.text_sub_tab.text_message.toPlainText()))
+            self.message_sent.emit(('PARM', self.cypher_mode.currentText()))
+            self.message_sent.emit(('DATA', self.text_sub_tab.text_message.toPlainText()))
             self.__empty_text_subtab()
         else:
             print('[GUI] Selected: send encrypted file')
@@ -115,20 +126,59 @@ class SendTab(QWidget):
         self.text_sub_tab.clear_text_message()
 
     def __empty_file_subtab(self):
-        ...
+        # TODO
+        pass
 
+    @QtCore.pyqtSlot(float)
     def update_progress_bar(self, value):
         self.progress_bar.setValue(value)
 
-    def __manage_connection(self):
+    def __manage_connection_input(self):
         if not self.__is_receiver_filled() or not self.receiver.hasAcceptableInput():
             QMessageBox.warning(self, "Validation error",
                                 "Receiver should be specified as IP address and port. For example: 127.0.0.1:2137")
             return
-        self.connected = not self.connected
-        self.__after_connection_change()
+        self.manage_connection()
+        self.connection_initiator = not self.connection_initiator
 
-    def __after_connection_change(self):
+    @QtCore.pyqtSlot(str)
+    def manage_connection(self, received_connection_request=None):
+        if self.connection_initiator:
+            self.connection_initiator = not self.connection_initiator
+            return
+
+        self.connected = not self.connected
+
+        if self.connected:
+            self.__handle_connect(received_connection_request)
+        elif not self.connected:
+            self.__handle_disconnect(received_connection_request)
+
+        self.__toggle_connection_view()
+
+    def __handle_connect(self, received_connection_request):
+        address = received_connection_request if received_connection_request else self.receiver.text()
+
+        # send signal to app window to open sender thread connecting to given address
+        self.connection_requested.emit(address)
+
+        self.message_sent.emit(('INIT', address))
+        self.message_sent.emit(('PKEY', 'null'))
+        self.message_sent.emit(('SKEY', 'null'))
+
+        if received_connection_request:
+            self.receiver.setText(received_connection_request)
+
+    def __handle_disconnect(self, received_connection_request):
+        self.message_sent.emit(('QUIT', ''))
+
+        if received_connection_request:
+            self.receiver.clear()
+
+        # send signal to app window to close sender thread
+        self.connection_closed.emit()
+
+    def __toggle_connection_view(self):
         self.cypher_mode.setDisabled(not self.connected)
         self.cypher_mode_label.setDisabled(not self.connected)
         self.tabs.setDisabled(not self.connected)
@@ -137,16 +187,18 @@ class SendTab(QWidget):
         self.progress_bar_label.setDisabled(not self.connected)
         self.receiver.setDisabled(self.connected)
         self.receiver_label.setDisabled(self.connected)
-        if self.connected:
-            self.connect_button.setText("Disconnect")
-            self.connection_requested.emit(self.receiver.text())
-            self.output_queue.async_put(('INIT', self.receiver.text()))
-            self.output_queue.async_put(('PKEY', 'null'))
-            self.output_queue.async_put(('SKEY', 'null'))
-        else:
-            self.connect_button.setText("Connect")
-            self.output_queue.async_put(('QUIT', self.receiver.text()))
-            self.connection_closed.emit()
+
+        self.connect_button.setText("Disconnect") if self.connected else self.connect_button.setText("Connect")
 
     def __is_receiver_filled(self):
         return self.receiver.text() is not None and self.receiver.text() != ""
+
+
+class SendWorker(QObject):
+    def __init__(self, output_queue):
+        QObject.__init__(self)
+        self.output_queue = output_queue
+
+    # @QtCore.pyqtSlot(object) TODO
+    def message_sent(self, message):
+        self.output_queue.sync_put(message)

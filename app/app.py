@@ -1,3 +1,5 @@
+from PyQt5 import QtCore
+
 from PyQt5.QtWidgets import QMainWindow, QInputDialog, QLineEdit, QMessageBox
 
 from app.tabs_widget import TabsWidget
@@ -11,14 +13,15 @@ class App(QMainWindow):
     windowHeight = 450
     windowWidth = 300
 
-    def __init__(self):
+    def __init__(self, receiver_port):
         super(QMainWindow, self).__init__()
+
         self.input_queue = None
         self.output_queue = None
         self.shared_data = None
 
         self.rsa_key = None
-        self.receiver_port = 55555
+        self.receiver_port = receiver_port
 
         self.receiver_thread_handler = None
         self.sender_thread_handler = None
@@ -50,14 +53,18 @@ class App(QMainWindow):
         self.receiver_thread_handler.create(self.rsa_key.private_key, self.input_queue, self.shared_data,
                                             self.receiver_port)
 
+    @QtCore.pyqtSlot(str)
     def __start_connection(self, address):
         host, port = address.split(':')
         self.sender_thread_handler = SenderThreadHandler()
-        self.sender_thread_handler.create(self.rsa_key.public_key, self.output_queue, self.shared_data, (host, port))
+        self.sender_thread_handler.create(self.rsa_key.public_key, self.output_queue, self.shared_data, (host, port),
+                                          self.receiver_port)
 
+    @QtCore.pyqtSlot()
     def __close_connection(self):
-        # self.output_queue.async_empty()
         self.sender_thread_handler.close()
+        self.output_queue.close()
+        self.shared_data.close()
         # self.sender_thread_handler.thread.join()  # TODO
         # self.receiver_thread.join()    # TODO
 
