@@ -2,7 +2,7 @@ from PyQt5 import QtCore
 
 from PyQt5.QtWidgets import QMainWindow, QInputDialog, QLineEdit, QMessageBox
 
-from app.tabs_widget import TabsWidget
+from app.tabs.tabs_widget import TabsWidget
 from threads.async_queue import AsyncQueue
 from threads.thread_handler import SenderThreadHandler, ReceiverThreadHandler
 
@@ -65,8 +65,8 @@ class App(QMainWindow):
         self.sender_thread_handler.close()
         self.output_queue.close()
         self.shared_data.close()
-        # self.sender_thread_handler.thread.join()  # TODO
-        # self.receiver_thread.join()    # TODO
+        # self.sender_thread_handler.thread.join()  # TODO: handle joining communication threads
+        # self.receiver_thread.join()
 
     def __close_application(self):
         # qt kills all its subthreads when the main loop exits event loop, only TCP connection threads need to be closed

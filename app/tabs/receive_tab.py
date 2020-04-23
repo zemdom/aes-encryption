@@ -1,10 +1,11 @@
 from PyQt5 import QtCore
 from PyQt5.QtCore import QThread, pyqtSignal, QObject, QRegExp
 from PyQt5.QtGui import QRegExpValidator
-from PyQt5.QtWidgets import QWidget, QHBoxLayout, QLabel, QLineEdit, QVBoxLayout, QTabWidget, QPushButton, QMessageBox
+from PyQt5.QtWidgets import QWidget, QHBoxLayout, QLabel, QLineEdit, QVBoxLayout, QTabWidget, QPushButton, QMessageBox, \
+    QProgressBar
 
-from app.send_tab.sub_tabs.file_subtab import FileSubTab
-from app.send_tab.sub_tabs.text_subtab import TextSubTab
+from app.tabs.sub_tabs.file_subtab import FileSubTab
+from app.tabs.sub_tabs.text_subtab import TextSubTab
 
 
 class ReceiveTab(QWidget):
@@ -16,11 +17,16 @@ class ReceiveTab(QWidget):
 
         self.input_queue = input_queue
         self.message_dispatchers = dict(INIT=ReceiveTab.__dispatch_init_message,
-                                        PKEY=ReceiveTab.__mock,
-                                        SKEY=ReceiveTab.__mock,
-                                        PARM=ReceiveTab.__mock,
-                                        DATA=ReceiveTab.__dispatch_data_message,
+                                        PKEY=ReceiveTab.__dispatch_irrelevant_message,
+                                        SKEY=ReceiveTab.__dispatch_irrelevant_message,
+                                        PARM=ReceiveTab.__dispatch_irrelevant_message,
+                                        TEXT=ReceiveTab.__dispatch_text_message,
+                                        FILE=ReceiveTab.__dispatch_file_message,
                                         QUIT=ReceiveTab.__dispatch_quit_message)
+        self.file_message_dispatchers = dict(INIT=ReceiveTab.__dispatch_file_init_message,
+                                             DATA=ReceiveTab.__dispatch_file_data_message,
+                                             QUIT=ReceiveTab.__dispatch_file_quit_message)
+        self.file_path = None
 
         self.worker = ReceiveWorker(self.input_queue)
         self.thread = QThread(self)
@@ -37,6 +43,7 @@ class ReceiveTab(QWidget):
         vertical_layout.addLayout(self.__init_listening_port())
         vertical_layout.addLayout(self.__init_sender_input())
         vertical_layout.addLayout(self.__init_content_tabs())
+        vertical_layout.addLayout(self.__init_footer())
         self.setLayout(vertical_layout)
 
     def __init_listening_port(self):
@@ -53,7 +60,7 @@ class ReceiveTab(QWidget):
 
     def __on_listening_button_click(self):
         if not self.listening_port.hasAcceptableInput():
-            QMessageBox.warning(self, 'Error', 'Port should be number from 0 to 99999')
+            QMessageBox.warning(self, 'Error', 'Port should be number from 0 to 65535')
             return
         self.__change_button_text()
         self.__change_tab_enable_state()
@@ -80,18 +87,37 @@ class ReceiveTab(QWidget):
         layout = QHBoxLayout()
         self.tabs = QTabWidget()
         self.text_sub_tab = TextSubTab(sending=False)
+        self.text_sub_tab.setDisabled(True)
         self.tabs.addTab(self.text_sub_tab, 'Text')
         self.file_sub_tab = FileSubTab(sending=False)
+        self.file_sub_tab.file_downloaded.connect(self.update_progress_bar)
         self.tabs.addTab(self.file_sub_tab, 'File')
         self.tabs.resize(250, 300)
-        self.tabs.setDisabled(True)
+        # self.tabs.setDisabled(True)
         layout.addWidget(self.tabs)
         return layout
 
     @QtCore.pyqtSlot()
     def empty_content_tabs(self):
         self.text_sub_tab.clear_text_message()
-        # TODO empty files tab
+        # TODO: empty files tab
+
+    def __init_footer(self):
+        layout = QHBoxLayout()
+        self.__init_progress_bar(layout)
+        return layout
+
+    def __init_progress_bar(self, layout):
+        self.progress_bar = QProgressBar(self)
+        self.progress_bar.setDisabled(True)
+        self.progress_bar_label = QLabel("File receiving progress:")
+        self.progress_bar_label.setDisabled(True)
+        layout.addWidget(self.progress_bar_label)
+        layout.addWidget(self.progress_bar)
+
+    @QtCore.pyqtSlot(int)
+    def update_progress_bar(self, value):
+        self.progress_bar.setValue(value)
 
     @QtCore.pyqtSlot(object)
     def __message_received(self, message):
@@ -105,16 +131,29 @@ class ReceiveTab(QWidget):
         self.sender.setText(host)
         self.received_connection_request.emit(message)
 
-    def __dispatch_data_message(self, message):
+    def __dispatch_text_message(self, message):
         self.text_sub_tab.append_text_message(message)
+
+    def __dispatch_file_message(self, message):
+        file_message_type, file_message_data = message
+        self.file_message_dispatchers.get(file_message_type)(self, file_message_data)
+
+    def __dispatch_file_init_message(self, file_message):
+        self.file_path = file_message
+
+    def __dispatch_file_data_message(self, file_message):
+        progress_bar_value = int(file_message)
+        self.update_progress_bar(progress_bar_value)
+
+    def __dispatch_file_quit_message(self, file_message):
+        self.file_sub_tab.append_file(self.file_path, file_message)
 
     def __dispatch_quit_message(self, message):
         self.sender.clear()
         self.empty_content_tabs()
         self.received_connection_request.emit('')
 
-    # TODO
-    def __mock(self, message):
+    def __dispatch_irrelevant_message(self, message):
         pass
 
 

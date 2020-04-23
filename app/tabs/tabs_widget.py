@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTabWidget
 
-from app.receive_tab import ReceiveTab
-from app.send_tab.send_tab import SendTab
+from app.tabs.receive_tab import ReceiveTab
+from app.tabs.send_tab import SendTab
 
 
 class TabsWidget(QWidget):

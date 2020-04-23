@@ -5,8 +5,8 @@ from PyQt5.QtWidgets import QWidget, QPushButton, QHBoxLayout, QVBoxLayout, QLab
     QMessageBox, QProgressBar
 
 from config import BLOCK_CIPHER_MODE
-from app.send_tab.sub_tabs.file_subtab import FileSubTab
-from app.send_tab.sub_tabs.text_subtab import TextSubTab
+from app.tabs.sub_tabs.file_subtab import FileSubTab
+from app.tabs.sub_tabs.text_subtab import TextSubTab
 
 
 class SendTab(QWidget):
@@ -97,7 +97,7 @@ class SendTab(QWidget):
     def __init_progress_bar(self, layout):
         self.progress_bar = QProgressBar(self)
         self.progress_bar.setDisabled(True)
-        self.progress_bar_label = QLabel("Sending progress:")
+        self.progress_bar_label = QLabel("File sending progress:")
         self.progress_bar_label.setDisabled(True)
         layout.addWidget(self.progress_bar_label)
         layout.addWidget(self.progress_bar)
@@ -111,25 +111,27 @@ class SendTab(QWidget):
     def __send_message(self):
         if self.receiver.text() == '':
             QMessageBox.warning(self, 'Error', 'Please specify receiver!')
+
+        self.message_sent.emit(('PARM', self.cypher_mode.currentText()))
+
         if self.tabs.currentIndex() == 0:
             print('[GUI] Selected: send encrypted text')
-
-            self.message_sent.emit(('PARM', self.cypher_mode.currentText()))
-            self.message_sent.emit(('DATA', self.text_sub_tab.text_message.toPlainText()))
+            self.message_sent.emit(('TEXT', self.text_sub_tab.text_message.toPlainText()))
             self.__empty_text_subtab()
         else:
             print('[GUI] Selected: send encrypted file')
-            # encrypt(self.receiver.text(), self.cypher_mode.currentText(), self.file_sub_tab.file)
-            self.__empty_file_subtab()
+            self.message_sent.emit(('FILE', ('INIT', self.file_sub_tab.filename)))
+            self.message_sent.emit(('FILE', ('DATA', 'null')))
+            self.message_sent.emit(('FILE', ('QUIT', 'null')))
+            # self.__empty_file_subtab()
 
     def __empty_text_subtab(self):
         self.text_sub_tab.clear_text_message()
 
     def __empty_file_subtab(self):
-        # TODO
-        pass
+        self.file_sub_tab.clear_file()
 
-    @QtCore.pyqtSlot(float)
+    @QtCore.pyqtSlot(int)
     def update_progress_bar(self, value):
         self.progress_bar.setValue(value)
 
@@ -170,7 +172,7 @@ class SendTab(QWidget):
             self.receiver.setText(received_connection_request)
 
     def __handle_disconnect(self, received_connection_request):
-        self.message_sent.emit(('QUIT', ''))
+        self.message_sent.emit(('QUIT', 'null'))
 
         if received_connection_request:
             self.receiver.clear()

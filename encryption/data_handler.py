@@ -16,9 +16,3 @@ class DataHandler:
             # when padding cannot be removed, sender entered incorrect access key and the data is random
             transformed_data = data  # return the random data
         return transformed_data
-
-    def __divide(self, data):
-        ...
-
-    def __merge(self, data):
-        ...
