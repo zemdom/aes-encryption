@@ -24,6 +24,7 @@ class ReceiveTab(QWidget):
                                         FILE=ReceiveTab.__dispatch_file_message,
                                         QUIT=ReceiveTab.__dispatch_quit_message)
         self.file_message_dispatchers = dict(INIT=ReceiveTab.__dispatch_file_init_message,
+                                             PARM=ReceiveTab.__dispatch_file_parm_message,
                                              DATA=ReceiveTab.__dispatch_file_data_message,
                                              QUIT=ReceiveTab.__dispatch_file_quit_message)
         self.file_path = None
@@ -141,12 +142,16 @@ class ReceiveTab(QWidget):
     def __dispatch_file_init_message(self, file_message):
         self.file_path = file_message
 
+    def __dispatch_file_parm_message(self, file_message):
+        pass
+
     def __dispatch_file_data_message(self, file_message):
         progress_bar_value = int(file_message)
         self.update_progress_bar(progress_bar_value)
 
     def __dispatch_file_quit_message(self, file_message):
-        self.file_sub_tab.append_file(self.file_path, file_message)
+        self.update_progress_bar(100)
+        self.file_sub_tab.append_file(self.file_path)
 
     def __dispatch_quit_message(self, message):
         self.sender.clear()

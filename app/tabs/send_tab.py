@@ -121,6 +121,7 @@ class SendTab(QWidget):
         else:
             print('[GUI] Selected: send encrypted file')
             self.message_sent.emit(('FILE', ('INIT', self.file_sub_tab.filename)))
+            self.message_sent.emit(('FILE', ('PARM', 'null')))
             self.message_sent.emit(('FILE', ('DATA', 'null')))
             self.message_sent.emit(('FILE', ('QUIT', 'null')))
             # self.__empty_file_subtab()

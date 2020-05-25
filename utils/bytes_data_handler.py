@@ -3,7 +3,7 @@ from Cryptodome.Util.Padding import pad, unpad
 from config import BLOCK_SIZE
 
 
-class DataHandler:
+class BytesDataHandler:
     @staticmethod
     def add_padding(data):
         return pad(data, block_size=BLOCK_SIZE)

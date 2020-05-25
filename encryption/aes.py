@@ -2,7 +2,7 @@ from Cryptodome.Random import get_random_bytes
 from Cryptodome.Cipher import AES
 
 from config import BLOCK_CIPHER_MODE
-from encryption.data_handler import DataHandler
+from utils.bytes_data_handler import BytesDataHandler
 
 
 class AESEncryption:
@@ -49,12 +49,12 @@ class AESEncryption:
 
     def use(self, data):
         if self.encode:
-            data = DataHandler.add_padding(data) if self.padding else data
+            data = BytesDataHandler.add_padding(data) if self.padding else data
             data = self.__encrypt(data)
             return data
         else:
             data = self.__decrypt(data)
-            data = DataHandler.remove_padding(data) if self.padding else data
+            data = BytesDataHandler.remove_padding(data) if self.padding else data
             return data
 
     def __encrypt(self, data):

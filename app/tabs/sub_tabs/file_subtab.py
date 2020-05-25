@@ -1,7 +1,9 @@
 import os
 
 from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtWidgets import QWidget, QHBoxLayout, QFileDialog, QPushButton, QMessageBox, QLabel, QVBoxLayout, QLineEdit
+from PyQt5.QtWidgets import QWidget, QHBoxLayout, QFileDialog, QPushButton, QLabel, QVBoxLayout, QLineEdit
+
+from utils.file_handler import FileHandler
 
 
 class FileSubTab(QWidget):
@@ -10,7 +12,6 @@ class FileSubTab(QWidget):
     def __init__(self, sending=True):
         super(QWidget, self).__init__()
         self.filename = None
-        self.file = None
         self.download_file_button = QPushButton()
         vertical_layout = QVBoxLayout()
         if sending:
@@ -46,15 +47,14 @@ class FileSubTab(QWidget):
         return layout
 
     def __download_file(self):
-        if self.file is None:
-            QMessageBox.warning(self, "Error", "You didn't receive any file!")
-            return
         directory = str(QFileDialog.getExistingDirectory(self, "Select directory"))
         path = os.path.join(directory, self.filename)
-        with open(path, 'wb+') as file:
-            # file.write(self.file.read()) # TODO: write incoming file bytes to mmap
-            file.write(self.file)
-        # self.file.close() # TODO: write incoming file bytes to mmap
+
+        temporary_directory = FileHandler.get_temporary_file_directory_path()
+        temporary_path = os.path.join(temporary_directory, self.filename)
+
+        FileHandler.move_temporary_file(temporary_path, path)  # copy temporary file to target destination
+
         self.file_downloaded.emit(0)
         self.clear_file()
 
@@ -69,19 +69,12 @@ class FileSubTab(QWidget):
         layout.addWidget(self.file_name_label)
         return layout
 
-    #  @QtCore.pyqtSlot(object)
-    def append_file(self, filename, file=None):
+    def append_file(self, filename):
         self.filename = filename
         self.on_file_change()
-        self.file = file if file else None
 
     def clear_file(self):
         self.filename = None
-
-        # if self.file and not self.file.closed: # TODO: write incoming file bytes to mmap
-        #     self.file.close()
-        self.file = None
-
         self.on_file_change()
 
     def on_file_change(self):

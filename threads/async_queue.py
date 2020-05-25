@@ -25,7 +25,8 @@ class AsyncQueue(janus.Queue):
         if not self.created.is_set():
             self.created.set()
             self.loop = loop
-            super().__init__(maxsize=0, loop=self.loop)
+            # super().__init__(maxsize=0, loop=self.loop)
+            super().__init__(maxsize=0)
 
     def sync_get(self):
         self.__sync_wait_until_created()

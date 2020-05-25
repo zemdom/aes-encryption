@@ -1,6 +1,6 @@
 import asyncio
 import mmap
-import ntpath
+import os
 import socket
 import struct
 
@@ -9,6 +9,7 @@ from config import SOCKET_HEADFORMAT, SOCKET_HEADLEN, BLOCK_SIZE, SESSION_KEY_SI
     FILE_PERCENT_LEN
 from encryption.aes import AESEncryption
 from encryption.keys.key_handler import ReceiverKeyHandler, SenderKeyHandler
+from utils.file_handler import FileHandler
 
 
 class MessageHandler:
@@ -44,6 +45,7 @@ class SenderMessageHandler(MessageHandler):
                              TEXT=SenderMessageHandler.__text_handler, FILE=SenderMessageHandler.__file_handler,
                              QUIT=SenderMessageHandler.__quit_handler)  # {message_type : handler_function}
         self.file_handlers = dict(INIT=SenderMessageHandler.__file_init_handler,
+                                  PARM=SenderMessageHandler.__file_parm_handler,
                                   DATA=SenderMessageHandler.__file_data_handler,
                                   QUIT=SenderMessageHandler.__file_quit_handler)  # {file_message_type : file_handler_function}
         self.port = port
@@ -110,9 +112,15 @@ class SenderMessageHandler(MessageHandler):
 
     def __file_init_handler(self, file_message_type, file_message_data):
         self.file_path = file_message_data
-        file_message_data = ntpath.basename(file_message_data)
+        # file_message_data = ntpath.basename(file_message_data)
+        file_message_data = os.path.basename(file_message_data)
         file_message_data = file_message_data.encode()
         # TODO: write incoming file bytes to mmap - send file size parameter
+        yield file_message_type, file_message_data
+
+    def __file_parm_handler(self, file_message_type, file_message_data):
+        file_message_data = os.path.getsize(self.file_path)
+        file_message_data = str(file_message_data).encode()
         yield file_message_type, file_message_data
 
     def __file_data_handler(self, file_message_type, file_message_data):
@@ -204,8 +212,10 @@ class ReceiverMessageHandler(MessageHandler):
                              TEXT=ReceiverMessageHandler.__text_handler, FILE=ReceiverMessageHandler.__file_handler,
                              QUIT=ReceiverMessageHandler.__quit_handler)  # {message_type : handler_function}
         self.file_handlers = dict(INIT=ReceiverMessageHandler.__file_init_handler,
+                                  PARM=ReceiverMessageHandler.__file_parm_handler,
                                   DATA=ReceiverMessageHandler.__file_data_handler,
                                   QUIT=ReceiverMessageHandler.__file_quit_handler)  # {file_message_type : file_handler_function}
+        self.file_name = None
         self.file = None
 
     async def dispatch_message(self, message):
@@ -267,24 +277,26 @@ class ReceiverMessageHandler(MessageHandler):
             yield file_message_type, file_message_data
 
     def __file_init_handler(self, file_message_type, file_message_data):
-        # if self.file and not self.file.closed:
-        #     self.file.close()
-        # self.file = mmap.mmap(-1, 100000)  # create anonymous memory-mapped file object without specifying size
-        # TODO: write incoming file bytes to mmap
-        self.file = b''
         file_message_data = file_message_data.decode()
+        self.file_name = file_message_data
+        temporary_directory = FileHandler.get_temporary_file_directory_path()
+        temporary_path = os.path.join(temporary_directory, self.file_name)
+        self.file = open(temporary_path, 'wb+')
+        yield file_message_type, file_message_data
+
+    def __file_parm_handler(self, file_message_type, file_message_data):
+        file_message_data = file_message_data.decode()
+        file_message_data = int(file_message_data)
         yield file_message_type, file_message_data
 
     def __file_data_handler(self, file_message_type, file_message_data):
         file_message_header, file_message_data = self.__file_unpack_data(file_message_data)
-        # self.file.write(file_message_data) # TODO: write incoming file bytes to mmap
-        self.file += file_message_data
+        self.file.write(file_message_data)
         file_message_data = file_message_header
         yield file_message_type, file_message_data
 
     def __file_quit_handler(self, file_message_type, file_message_data):
-        # file_message_data = self.file.read() # TODO: write incoming file bytes to mmap
-        file_message_data = self.file
+        self.file.close()
         yield file_message_type, file_message_data
 
     async def __quit_handler(self, message_type, message_data):

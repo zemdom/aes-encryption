@@ -4,7 +4,7 @@ from Cryptodome.Cipher import AES
 from Cryptodome.Hash import SHA256
 from Cryptodome.PublicKey import RSA
 
-from encryption.data_handler import DataHandler
+from utils.bytes_data_handler import BytesDataHandler
 
 
 class SenderRSAKey:
@@ -37,8 +37,8 @@ class SenderRSAKey:
 
     def __encrypt_key(self):
         if self.private_key and self.public_key:
-            padded_private_key = DataHandler.add_padding(self.private_key)
-            padded_public_key = DataHandler.add_padding(self.public_key)
+            padded_private_key = BytesDataHandler.add_padding(self.private_key)
+            padded_public_key = BytesDataHandler.add_padding(self.public_key)
 
             self.encrypted_private_key = self.cipher.encrypt(padded_private_key)
             self.encrypted_public_key = self.cipher.encrypt(padded_public_key)
@@ -48,8 +48,8 @@ class SenderRSAKey:
             self.private_key = self.cipher.decrypt(self.encrypted_private_key)
             self.public_key = self.cipher.decrypt(self.encrypted_public_key)
 
-            self.private_key = DataHandler.remove_padding(self.private_key)
-            self.public_key = DataHandler.remove_padding(self.public_key)
+            self.private_key = BytesDataHandler.remove_padding(self.private_key)
+            self.public_key = BytesDataHandler.remove_padding(self.public_key)
 
             self.__check_if_correct_access_key()
 

@@ -7,6 +7,7 @@ from threads.async_queue import AsyncQueue
 from threads.thread_handler import SenderThreadHandler, ReceiverThreadHandler
 
 from encryption.keys.rsa_key import SenderRSAKey
+from utils.file_handler import FileHandler
 
 
 class App(QMainWindow):
@@ -42,6 +43,8 @@ class App(QMainWindow):
             self.__init_application(password)
 
     def __init_application(self, password):
+        FileHandler.create_temporary_file_directory()
+
         self.rsa_key = SenderRSAKey(password)
         self.rsa_key.create()
 
@@ -69,6 +72,8 @@ class App(QMainWindow):
         # self.receiver_thread.join()
 
     def __close_application(self):
+        FileHandler.remove_temporary_file_directory()
+
         # qt kills all its subthreads when the main loop exits event loop, only TCP connection threads need to be closed
         self.receiver_thread_handler.close()
         if self.sender_thread_handler:
