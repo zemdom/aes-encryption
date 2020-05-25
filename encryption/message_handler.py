@@ -70,7 +70,7 @@ class SenderMessageHandler(MessageHandler):
         yield message_type, message_data
 
     async def __pkey_handler(self, message_type, message_data):
-        message_data = self.key_handler.public_key
+        message_data = self.key_handler.rsa_key
         yield message_type, message_data
 
     async def __skey_handler(self, message_type, message_data):
@@ -84,7 +84,7 @@ class SenderMessageHandler(MessageHandler):
         cipher_mode = message_data
         self.aes.create(cipher_mode)
         message_data = self.__pack_parameters(message_data)
-        # TODO: encrypt message_data
+        message_data = self.key_handler.encrypt_using_rsa_key(message_data)
         yield message_type, message_data
 
     async def __text_handler(self, message_type, message_data):
@@ -112,10 +112,8 @@ class SenderMessageHandler(MessageHandler):
 
     def __file_init_handler(self, file_message_type, file_message_data):
         self.file_path = file_message_data
-        # file_message_data = ntpath.basename(file_message_data)
         file_message_data = os.path.basename(file_message_data)
         file_message_data = file_message_data.encode()
-        # TODO: write incoming file bytes to mmap - send file size parameter
         yield file_message_type, file_message_data
 
     def __file_parm_handler(self, file_message_type, file_message_data):
@@ -245,7 +243,7 @@ class ReceiverMessageHandler(MessageHandler):
         yield message_type, message_data
 
     async def __parm_handler(self, message_type, message_data):
-        # TODO: decrypt message_data
+        message_data = self.key_handler.decrypt_using_rsa_key(message_data)
         parameters = self.__unpack_parameters(message_data)
         algorithm_type, session_key_size, block_size, cipher_mode, initial_vector = parameters
         self.key_handler.sender_session_key_handler.create(session_key_size)

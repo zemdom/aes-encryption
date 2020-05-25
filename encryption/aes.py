@@ -9,9 +9,7 @@ class AESEncryption:
     def __init__(self, encode=True):
         self.encode = encode
         self.padding = False
-        # self.key_size = ...
         self.session_key = None
-        # self.block_size = BLOCK_SIZE
         self.initial_vector = None
         self.cipher = None
         self.cipher_mode_dict = {BLOCK_CIPHER_MODE.ECB: AESEncryption.__set_ecb_mode,

@@ -15,11 +15,11 @@ class SenderRSAKey:
         self.encrypted_private_key = None
         self.encrypted_public_key = None
 
-        self.path_private_key = './../test/private/'
+        self.path_private_key = './../rsa/private/'
         self.private_key_filename = 'private.pem'
         self.full_path_private_key = self.path_private_key + self.private_key_filename
 
-        self.path_public_key = './../test/public/'
+        self.path_public_key = './../rsa/public/'
         self.public_key_filename = 'public.pem'
         self.full_path_public_key = self.path_public_key + self.public_key_filename
 
