@@ -34,9 +34,13 @@ class MessageHandler:
 
 
 class SenderMessageHandler(MessageHandler):
-    def __init__(self, public_key, input_queue, output_queue, shared_data, port, connection_open, encrypt=True):
+    def __init__(self, public_key, input_queue, output_queue, shared_data, gui_data, port, connection_open,
+                 encrypt=True):
         shared_data.create(asyncio.get_running_loop())
+        gui_data.create(asyncio.get_running_loop())
+
         super().__init__(input_queue, output_queue, shared_data, connection_open, encrypt)
+        self.gui_data = gui_data
 
         self.key_handler = SenderKeyHandler(public_key)
         self.handlers = dict(INIT=SenderMessageHandler.__init_handler, PKEY=SenderMessageHandler.__pkey_handler,
@@ -121,11 +125,13 @@ class SenderMessageHandler(MessageHandler):
         yield file_message_type, file_message_data
 
     def __file_data_handler(self, file_message_type, file_message_data):
-        for file_message_data in self.__file_pack_data(self.file_path):
+        for file_message_data, file_message_percent in self.__file_pack_data(self.file_path):
+            self.gui_data.sync_put(file_message_percent)
             yield file_message_type, file_message_data
 
     def __file_quit_handler(self, file_message_type, file_message_data):
         self.file_path = None
+        self.gui_data.sync_put(100)
         file_message_data = file_message_data.encode()
         yield file_message_type, file_message_data
 
@@ -163,8 +169,8 @@ class SenderMessageHandler(MessageHandler):
         """
 
         :param str file_path:
-        :return: message
-        ":rtype: bytes
+        :return: message, message_percent
+        ":rtype: (bytes, int)
         """
 
         file_message_length = SOCKET_BUFSIZE - (FILE_PERCENT_LEN // 8)
@@ -180,7 +186,8 @@ class SenderMessageHandler(MessageHandler):
                                                                            byteorder='little')
                 file_message_data = file.read(file_message_length)
                 message = file_message_header + file_message_data
-                yield message
+
+                yield message, percent
 
     @staticmethod
     def __pack_message(message_type, message_data):

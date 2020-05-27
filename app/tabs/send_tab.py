@@ -14,7 +14,7 @@ class SendTab(QWidget):
     connection_closed = pyqtSignal()
     message_sent = pyqtSignal(object)
 
-    def __init__(self, output_queue, parent=None):
+    def __init__(self, output_queue, gui_data, parent=None):
         super(QWidget, self).__init__(parent)
         self.__create_layout()
 
@@ -22,14 +22,26 @@ class SendTab(QWidget):
         self.connection_initiator = False
 
         self.output_queue = output_queue
-        self.worker = SendWorker(self.output_queue)
-        self.thread = QThread(self)
+        self.gui_data = gui_data
+
+        self.send_worker = SendWorker(self.output_queue)
+        self.send_thread = QThread(self)
         self.__init_sending_thread()
 
+        self.progress_bar_worker = ProgressBarWorker(self.gui_data)
+        self.progress_bar_thread = QThread(self)
+        self.__init_progress_bar_thread()
+
     def __init_sending_thread(self):
-        self.message_sent.connect(self.worker.message_sent)
-        self.worker.moveToThread(self.thread)
-        self.thread.start()
+        self.message_sent.connect(self.send_worker.message_sent)
+        self.send_worker.moveToThread(self.send_thread)
+        self.send_thread.start()
+
+    def __init_progress_bar_thread(self):
+        self.progress_bar_worker.progress_bar_data_received.connect(self.update_progress_bar)
+        self.progress_bar_worker.moveToThread(self.progress_bar_thread)
+        self.progress_bar_thread.started.connect(self.progress_bar_worker.run)
+        self.progress_bar_thread.start()
 
     def __create_layout(self):
         vertical_layout = QVBoxLayout()
@@ -206,3 +218,17 @@ class SendWorker(QObject):
     # @QtCore.pyqtSlot(object) TODO
     def message_sent(self, message):
         self.output_queue.sync_put(message)
+
+
+class ProgressBarWorker(QObject):
+    progress_bar_data_received = pyqtSignal(int)
+
+    def __init__(self, gui_data):
+        QObject.__init__(self)
+        self.gui_data = gui_data
+
+    @QtCore.pyqtSlot()
+    def run(self):
+        while True:
+            message = self.gui_data.sync_get()
+            self.progress_bar_data_received.emit(message)

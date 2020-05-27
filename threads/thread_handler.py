@@ -14,28 +14,28 @@ class ThreadHandler:
         self.thread = None
         self.task = None
 
-    def create(self, rsa_key, queue_plaindata, shared_data, address, port=None):
+    def create(self, rsa_key, queue_plaindata, shared_data, address, port=None, gui_data=None):
         queue_data = AsyncQueue()
         self.thread = threading.Thread(target=self._run_asyncio_task,
-                                       args=(rsa_key, queue_data, queue_plaindata, shared_data, address, port),
+                                       args=(
+                                           rsa_key, queue_data, queue_plaindata, shared_data, address, port, gui_data),
                                        name=f'{self.name} thread')
         self.thread.start()
         print(f'[{self.name}] Thread created')
 
-    def _run_asyncio_task(self, key, queue_data, queue_plaindata, shared_data, address, port):
-        asyncio.run(self._run_mainloops(key, queue_data, queue_plaindata, shared_data, address, port))
+    def _run_asyncio_task(self, key, queue_data, queue_plaindata, shared_data, address, port, gui_data):
+        asyncio.run(self._run_mainloops(key, queue_data, queue_plaindata, shared_data, address, port, gui_data))
         print(f'[{self.name}] Exiting thread')
 
-    async def _run_mainloops(self, key, queue_data, queue_plaindata, shared_data, address, port):
+    async def _run_mainloops(self, key, queue_data, queue_plaindata, shared_data, address, port, gui_data):
         loop = asyncio.get_running_loop()
 
         queue_data.create(loop)
         queue_plaindata.create(loop)
-        # shared_data.create(loop)
 
         print(f'[{self.name}] Data queues created')
 
-        message_handler = self._create_message_handler(key, queue_data, queue_plaindata, shared_data, port)
+        message_handler = self._create_message_handler(key, queue_data, queue_plaindata, shared_data, port, gui_data)
 
         self.task = asyncio.create_task(self._create_task(loop, message_handler, queue_data, address))
 
@@ -44,7 +44,7 @@ class ThreadHandler:
         except asyncio.CancelledError:
             print(f'[{self.name}] Closing {self.name.lower()} thread')
 
-    def _create_message_handler(self, key, queue_data, queue_plaindata, shared_data, port):
+    def _create_message_handler(self, key, queue_data, queue_plaindata, shared_data, port, gui_data):
         raise NotImplementedError
 
     async def _create_task(self, loop, message_handler, queue_data, address):
@@ -73,7 +73,7 @@ class ReceiverThreadHandler(ThreadHandler):
         super().__init__()
         self.name = 'RECEIVER'
 
-    def _create_message_handler(self, private_key, ingoing_data, ingoing_plaindata, shared_data, port):
+    def _create_message_handler(self, private_key, ingoing_data, ingoing_plaindata, shared_data, port, gui_data):
         return ReceiverMessageHandler(private_key, ingoing_data, ingoing_plaindata, shared_data, self.connection_open,
                                       encrypt=False)
 
@@ -89,8 +89,8 @@ class SenderThreadHandler(ThreadHandler):
         super().__init__()
         self.name = 'SENDER'
 
-    def _create_message_handler(self, public_key, outgoing_data, outgoing_plaindata, shared_data, port):
-        return SenderMessageHandler(public_key, outgoing_plaindata, outgoing_data, shared_data, port,
+    def _create_message_handler(self, public_key, outgoing_data, outgoing_plaindata, shared_data, port, gui_data):
+        return SenderMessageHandler(public_key, outgoing_plaindata, outgoing_data, shared_data, gui_data, port,
                                     self.connection_open)
 
     async def _create_connection(self, loop, outgoing_data, address):

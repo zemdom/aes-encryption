@@ -22,6 +22,7 @@ class App(QMainWindow):
         self.input_queue = None
         self.output_queue = None
         self.shared_data = None
+        self.gui_data = None
 
         self.receiver_port = None
         self.rsa_key = None
@@ -36,7 +37,7 @@ class App(QMainWindow):
         self.__init_application()
 
         self.central_widget = TabsWidget(self.windowHeight, self.windowWidth, self.input_queue, self.output_queue,
-                                         self.receiver_port)
+                                         self.gui_data, self.receiver_port)
         self.central_widget.send_tab.connection_requested.connect(self.__start_connection)
         self.central_widget.send_tab.connection_closed.connect(self.__close_connection)
         self.setCentralWidget(self.central_widget)
@@ -71,6 +72,7 @@ class App(QMainWindow):
         self.input_queue = AsyncQueue()
         self.output_queue = AsyncQueue()
         self.shared_data = AsyncQueue()
+        self.gui_data = AsyncQueue()
 
         self.receiver_thread_handler = ReceiverThreadHandler()
         self.receiver_thread_handler.create(self.rsa_key.private_key, self.input_queue, self.shared_data,
@@ -80,14 +82,15 @@ class App(QMainWindow):
     def __start_connection(self, address):
         host, port = address.split(':')
         self.sender_thread_handler = SenderThreadHandler()
-        self.sender_thread_handler.create(self.rsa_key.public_key, self.output_queue, self.shared_data, (host, port),
-                                          self.receiver_port)
+        self.sender_thread_handler.create(self.rsa_key.public_key, self.output_queue, self.shared_data,
+                                          (host, port), self.receiver_port, self.gui_data)
 
     @QtCore.pyqtSlot()
     def __close_connection(self):
         self.sender_thread_handler.close()
         self.output_queue.close()
         self.shared_data.close()
+        self.gui_data.close()
         # self.sender_thread_handler.thread.join()  # TODO: handle joining communication threads
         # self.receiver_thread.join()
 
