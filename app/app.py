@@ -56,7 +56,7 @@ class App(QMainWindow):
         return False
 
     def __get_receiver_port(self):
-        receiver_port, ok = QInputDialog.getText(self, 'Listening port', 'Enter listening port')
+        receiver_port, ok = QInputDialog.getText(self, 'Port', 'Enter listening port')
         if ok:
             self.receiver_port = receiver_port
             return True

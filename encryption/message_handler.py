@@ -1,5 +1,4 @@
 import asyncio
-import mmap
 import os
 import socket
 import struct
@@ -168,19 +167,20 @@ class SenderMessageHandler(MessageHandler):
         ":rtype: bytes
         """
 
-        with open(file_path, 'rb+') as file:
-            with mmap.mmap(file.fileno(), 0) as file_data:
-                file_message_length = SOCKET_BUFSIZE - (FILE_PERCENT_LEN // 8)
-                file_size = len(file_data) if len(file_data) > file_message_length else file_message_length
+        file_message_length = SOCKET_BUFSIZE - (FILE_PERCENT_LEN // 8)
 
-                for i in range(0, file_size, file_message_length):
-                    percent = int((i + file_message_length) / file_size * 100)
-                    file_message_header = f'{percent:{FILE_PERCENT_LEN}b}'
-                    file_message_header = int(file_message_header, 2).to_bytes(FILE_PERCENT_LEN // 8,
-                                                                               byteorder='little')
-                    file_message_data = file_data[i:i + file_message_length]
-                    message = file_message_header + file_message_data
-                    yield message
+        file_size = os.path.getsize(file_path)
+        file_size = file_size if file_size > file_message_length else file_message_length
+
+        with open(file_path, 'rb+') as file:
+            for i in range(0, file_size, file_message_length):
+                percent = int((i + file_message_length) / file_size * 100)
+                file_message_header = f'{percent:{FILE_PERCENT_LEN}b}'
+                file_message_header = int(file_message_header, 2).to_bytes(FILE_PERCENT_LEN // 8,
+                                                                           byteorder='little')
+                file_message_data = file.read(file_message_length)
+                message = file_message_header + file_message_data
+                yield message
 
     @staticmethod
     def __pack_message(message_type, message_data):
