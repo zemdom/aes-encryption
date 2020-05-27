@@ -53,7 +53,8 @@ class SendTab(QWidget):
     def __create_receiver_text_input(self):
         self.receiver = QLineEdit()
         ip_range = "(?:[0-1]?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])"
-        ip_regex = QRegExp("^" + ip_range + "\\." + ip_range + "\\." + ip_range + "\\." + ip_range + ":?[0-9]{0,5}$")
+        port_regex = "(0|[1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$"
+        ip_regex = QRegExp("^" + ip_range + "\\." + ip_range + "\\." + ip_range + "\\." + ip_range + ":?" + port_regex)
         ip_validator = QRegExpValidator(ip_regex, self)
         self.receiver.setValidator(ip_validator)
         return self.receiver
