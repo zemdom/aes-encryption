@@ -1,13 +1,11 @@
 import os
-import sys
 from PyQt5.QtWidgets import QApplication
 from app.app import App
 
 
 def run_gui():
-    receiver_port = sys.argv[1]
-    app = QApplication(sys.argv)
-    ex = App(receiver_port)
+    app = QApplication([])
+    ex = App()
     ex.show()
     app.exec_()
     print('[GUI] GUI closed')

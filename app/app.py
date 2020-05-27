@@ -1,3 +1,5 @@
+import os
+
 from PyQt5 import QtCore
 
 from PyQt5.QtWidgets import QMainWindow, QInputDialog, QLineEdit, QMessageBox
@@ -14,38 +16,56 @@ class App(QMainWindow):
     windowHeight = 450
     windowWidth = 300
 
-    def __init__(self, receiver_port):
+    def __init__(self):
         super(QMainWindow, self).__init__()
 
         self.input_queue = None
         self.output_queue = None
         self.shared_data = None
 
+        self.receiver_port = None
         self.rsa_key = None
-        self.receiver_port = receiver_port
 
         self.receiver_thread_handler = None
         self.sender_thread_handler = None
 
         self.setWindowTitle("Data encryption communicator")
         self.resize(self.windowHeight, self.windowWidth)
-        self.__get_password()
 
-        self.central_widget = TabsWidget(self.windowHeight, self.windowWidth, self.input_queue, self.output_queue)
+        self.__get_initial_data()
+        self.__init_application()
+
+        self.central_widget = TabsWidget(self.windowHeight, self.windowWidth, self.input_queue, self.output_queue,
+                                         self.receiver_port)
         self.central_widget.send_tab.connection_requested.connect(self.__start_connection)
         self.central_widget.send_tab.connection_closed.connect(self.__close_connection)
         self.setCentralWidget(self.central_widget)
+
+    def __get_initial_data(self):
+        entered_password = self.__get_password()
+        entered_receiver_port = self.__get_receiver_port()
+        if not entered_password or not entered_receiver_port:
+            os._exit(0)
+            # TODO: add dialog to enter parameters or close app
 
     def __get_password(self):
         password, ok = QInputDialog.getText(self, 'Password', 'Enter your password', QLineEdit.Password)
         if ok:
             self.password = password
-            self.__init_application(password)
+            return True
+        return False
 
-    def __init_application(self, password):
+    def __get_receiver_port(self):
+        receiver_port, ok = QInputDialog.getText(self, 'Listening port', 'Enter listening port')
+        if ok:
+            self.receiver_port = receiver_port
+            return True
+        return False
+
+    def __init_application(self):
         FileHandler.create_temporary_file_directory()
 
-        self.rsa_key = SenderRSAKey(password)
+        self.rsa_key = SenderRSAKey(self.password)
         self.rsa_key.create()
 
         self.input_queue = AsyncQueue()

@@ -1,8 +1,6 @@
 from PyQt5 import QtCore
-from PyQt5.QtCore import QThread, pyqtSignal, QObject, QRegExp
-from PyQt5.QtGui import QRegExpValidator
-from PyQt5.QtWidgets import QWidget, QHBoxLayout, QLabel, QLineEdit, QVBoxLayout, QTabWidget, QPushButton, QMessageBox, \
-    QProgressBar
+from PyQt5.QtCore import QThread, pyqtSignal, QObject
+from PyQt5.QtWidgets import QWidget, QHBoxLayout, QLabel, QLineEdit, QVBoxLayout, QTabWidget, QProgressBar
 
 from app.tabs.sub_tabs.file_subtab import FileSubTab
 from app.tabs.sub_tabs.text_subtab import TextSubTab
@@ -11,10 +9,8 @@ from app.tabs.sub_tabs.text_subtab import TextSubTab
 class ReceiveTab(QWidget):
     received_connection_request = pyqtSignal(str)
 
-    def __init__(self, input_queue, parent=None):
+    def __init__(self, input_queue, receiver_port, parent=None):
         super(QWidget, self).__init__(parent)
-        self.__create_layout()
-
         self.input_queue = input_queue
         self.message_dispatchers = dict(INIT=ReceiveTab.__dispatch_init_message,
                                         PKEY=ReceiveTab.__dispatch_irrelevant_message,
@@ -33,48 +29,31 @@ class ReceiveTab(QWidget):
         self.thread = QThread(self)
         self.__init_receiving_thread()
 
+        self.__create_layout(receiver_port)
+
     def __init_receiving_thread(self):
         self.worker.message_received.connect(self.__message_received)
         self.worker.moveToThread(self.thread)
         self.thread.started.connect(self.worker.run)
         self.thread.start()
 
-    def __create_layout(self):
+    def __create_layout(self, receiver_port):
         vertical_layout = QVBoxLayout()
-        vertical_layout.addLayout(self.__init_listening_port())
+        vertical_layout.addLayout(self.__init_receiving_port(receiver_port))
         vertical_layout.addLayout(self.__init_sender_input())
         vertical_layout.addLayout(self.__init_content_tabs())
         vertical_layout.addLayout(self.__init_footer())
         self.setLayout(vertical_layout)
 
-    def __init_listening_port(self):
+    def __init_receiving_port(self, receiver_port):
         layout = QHBoxLayout()
         layout.addWidget(QLabel('Listening port'))
         self.listening_port = QLineEdit()
-        self.listening_port.setValidator(QRegExpValidator(QRegExp('^[0-9]{1,5}$'), self))
+        self.listening_port.setText(receiver_port)
+        self.listening_port.setDisabled(True)
         layout.addWidget(self.listening_port)
-        self.listening_button = QPushButton('Start listening')
-        self.listening_button.clicked.connect(self.__on_listening_button_click)
-        layout.addWidget(self.listening_button)
         layout.addStretch(1)
         return layout
-
-    def __on_listening_button_click(self):
-        if not self.listening_port.hasAcceptableInput():
-            QMessageBox.warning(self, 'Error', 'Port should be number from 0 to 65535')
-            return
-        self.__change_button_text()
-        self.__change_tab_enable_state()
-        # todo: start listening on port specified in self.listening_port
-
-    def __change_button_text(self):
-        if self.listening_button.text() == 'Start listening':
-            self.listening_button.setText('Stop listening')
-        else:
-            self.listening_button.setText('Start listening')
-
-    def __change_tab_enable_state(self):
-        self.tabs.setEnabled(not self.tabs.isEnabled())
 
     def __init_sender_input(self):
         layout = QHBoxLayout()
