@@ -42,7 +42,7 @@ class ThreadHandler:
         try:
             await self.task
         except asyncio.CancelledError:
-            print(f'[{self.name}] Closing {self.name.lower()} thread')
+            print(f'[{self.name}] Closing {self.name.lower()}')
 
     def _create_message_handler(self, key, queue_data, queue_plaindata, shared_data, port, gui_data):
         raise NotImplementedError
@@ -71,7 +71,7 @@ class ThreadHandler:
 class ReceiverThreadHandler(ThreadHandler):
     def __init__(self):
         super().__init__()
-        self.name = 'RECEIVER'
+        self.name = 'RECEIVER THREAD'
 
     def _create_message_handler(self, private_key, ingoing_data, ingoing_plaindata, shared_data, port, gui_data):
         return ReceiverMessageHandler(private_key, ingoing_data, ingoing_plaindata, shared_data, self.connection_open,

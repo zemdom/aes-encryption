@@ -3,7 +3,7 @@ import os
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import QWidget, QHBoxLayout, QFileDialog, QPushButton, QLabel, QVBoxLayout, QLineEdit
 
-from utils.file_handler import FileHandler
+from utils.temporary_file_handler import TemporaryFileHandler
 
 
 class FileSubTab(QWidget):
@@ -50,10 +50,10 @@ class FileSubTab(QWidget):
         directory = str(QFileDialog.getExistingDirectory(self, "Select directory"))
         path = os.path.join(directory, self.filename)
 
-        temporary_directory = FileHandler.get_temporary_file_directory_path()
+        temporary_directory = TemporaryFileHandler.get_temporary_file_directory_path()
         temporary_path = os.path.join(temporary_directory, self.filename)
 
-        FileHandler.move_temporary_file(temporary_path, path)  # copy temporary file to target destination
+        TemporaryFileHandler.move_temporary_file(temporary_path, path)  # copy temporary file to target destination
 
         self.file_downloaded.emit(0)
         self.clear_file()

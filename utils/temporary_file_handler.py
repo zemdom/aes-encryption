@@ -4,10 +4,10 @@ import shutil
 from config import TMP_DIRECTORY_PATH
 
 
-class FileHandler:
+class TemporaryFileHandler:
     @staticmethod
     def create_temporary_file_directory():
-        directory_path = FileHandler.get_temporary_file_directory_path()
+        directory_path = TemporaryFileHandler.get_temporary_file_directory_path()
         try:
             os.makedirs(directory_path)  # creates intermediate directories if needed
         except OSError:

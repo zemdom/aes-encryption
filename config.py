@@ -20,3 +20,8 @@ SOCKET_HEADFORMAT = '4sL'  # formatting of a socket message header, 4s - 4 chars
 # SHARED
 BLOCK_CIPHER_MODE = Enum(value='BlockCipherMode', names={'ECB': 'ECB', 'CBC': 'CBC', 'CFB': 'CFB', 'OFB': 'OFB'})
 TMP_DIRECTORY_PATH = 'tmp'
+
+# LOGGING
+LOGS_DIRECTORY_PATH = 'logs'
+LOGS_FILENAME_PREFIX = f'debug_'
+LOGS_FILENAME_EXTENSION = '.log'

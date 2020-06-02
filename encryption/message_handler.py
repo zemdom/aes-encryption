@@ -8,7 +8,9 @@ from config import SOCKET_HEADFORMAT, SOCKET_HEADLEN, BLOCK_SIZE, SESSION_KEY_SI
     FILE_PERCENT_LEN
 from encryption.aes import AESEncryption
 from encryption.keys.key_handler import ReceiverKeyHandler, SenderKeyHandler
-from utils.file_handler import FileHandler
+from utils.benchmark import Benchmark
+from utils.logger_handler import logger
+from utils.temporary_file_handler import TemporaryFileHandler
 
 
 class MessageHandler:
@@ -19,6 +21,7 @@ class MessageHandler:
 
         self.connection_open = connection_open
 
+        self.benchmark = Benchmark()
         self.aes = AESEncryption(encrypt)
         self.handlers = dict()
         self.file_handlers = dict()
@@ -92,12 +95,26 @@ class SenderMessageHandler(MessageHandler):
 
     async def __text_handler(self, message_type, message_data):
         message_data = message_data.encode()
+
+        logger.debug(f'[SENDER] Beginning encryption of a text message')
+        self.benchmark.start_benchmarking()
+        self.benchmark.start_measuring()
+
         message_data = self.aes.use(message_data)
+
+        self.benchmark.stop_measuring()
+        self.benchmark.stop_benchmarking()
+        logger.debug(f'[SENDER] Finished encryption of a text message')
+
         yield message_type, message_data
 
     async def __file_handler(self, message_type, message_data):
         async for message_data in self.__file_dispatch_message(message_data):
+
+            self.benchmark.start_measuring()
             message_data = self.aes.use(message_data)
+            self.benchmark.stop_measuring()
+
             yield message_type, message_data
 
     async def __file_dispatch_message(self, message_data):
@@ -114,8 +131,14 @@ class SenderMessageHandler(MessageHandler):
             yield file_message
 
     def __file_init_handler(self, file_message_type, file_message_data):
+        logger.debug(f'[SENDER] Beginning encryption of a file')
+        self.benchmark.start_benchmarking()
+
         self.file_path = file_message_data
         file_message_data = os.path.basename(file_message_data)
+
+        logger.debug(f'[SENDER] Encrypting {file_message_data} file')
+
         file_message_data = file_message_data.encode()
         yield file_message_type, file_message_data
 
@@ -133,6 +156,10 @@ class SenderMessageHandler(MessageHandler):
         self.file_path = None
         self.gui_data.sync_put(100)
         file_message_data = file_message_data.encode()
+
+        self.benchmark.stop_benchmarking()
+        logger.debug(f'[SENDER] Finished encryption of a file')
+
         yield file_message_type, file_message_data
 
     async def __quit_handler(self, message_type, message_data):
@@ -260,12 +287,24 @@ class ReceiverMessageHandler(MessageHandler):
         yield message_type, message_data
 
     async def __text_handler(self, message_type, message_data):
+        logger.debug(f'[RECEIVER] Beginning decryption of a text message')
+        self.benchmark.start_benchmarking()
+        self.benchmark.start_measuring()
+
         message_data = self.aes.use(message_data)
+
+        self.benchmark.stop_measuring()
+        self.benchmark.stop_benchmarking()
+        logger.debug(f'[RECEIVER] Finished decryption of a text message')
+
         message_data = message_data.decode(errors='ignore')  # in case of random data, continue decoding without notice
         yield message_type, message_data
 
     async def __file_handler(self, message_type, message_data):
+        self.benchmark.start_measuring()
         message_data = self.aes.use(message_data)
+        self.benchmark.stop_measuring()
+
         async for message_data in self.__file_dispatch_message(message_data):
             yield message_type, message_data
 
@@ -282,9 +321,15 @@ class ReceiverMessageHandler(MessageHandler):
             yield file_message_type, file_message_data
 
     def __file_init_handler(self, file_message_type, file_message_data):
+        logger.debug(f'[RECEIVER] Beginning decryption of a file')
+        self.benchmark.start_benchmarking()
+
         file_message_data = file_message_data.decode()
         self.file_name = file_message_data
-        temporary_directory = FileHandler.get_temporary_file_directory_path()
+
+        logger.debug(f'[RECEIVER] Decrypting {file_message_data} file')
+
+        temporary_directory = TemporaryFileHandler.get_temporary_file_directory_path()
         temporary_path = os.path.join(temporary_directory, self.file_name)
         self.file = open(temporary_path, 'wb+')
         yield file_message_type, file_message_data
@@ -302,6 +347,10 @@ class ReceiverMessageHandler(MessageHandler):
 
     def __file_quit_handler(self, file_message_type, file_message_data):
         self.file.close()
+
+        self.benchmark.stop_benchmarking()
+        logger.debug(f'[RECEIVER] Finished decryption of a file')
+
         yield file_message_type, file_message_data
 
     async def __quit_handler(self, message_type, message_data):
