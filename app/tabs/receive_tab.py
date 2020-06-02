@@ -120,6 +120,7 @@ class ReceiveTab(QWidget):
 
     def __dispatch_file_init_message(self, file_message):
         self.file_path = file_message
+        self.file_sub_tab.append_file(self.file_path)
 
     def __dispatch_file_parm_message(self, file_message):
         pass
@@ -130,7 +131,6 @@ class ReceiveTab(QWidget):
 
     def __dispatch_file_quit_message(self, file_message):
         self.update_progress_bar(100)
-        self.file_sub_tab.append_file(self.file_path)
 
     def __dispatch_quit_message(self, message):
         self.sender.clear()

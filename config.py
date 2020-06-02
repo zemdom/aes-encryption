@@ -14,7 +14,10 @@ FILE_PERCENT_LEN = 8  # length of a percent size parameter in file message in bi
 
 # COMMUNICATION
 SOCKET_BUFSIZE = BLOCK_SIZE * 1536  # maximum amount of data to be received at once by socket
-SOCKET_HEADLEN = 8  # length of a socket message header (message type, message length) in bytes
+SOCKET_HEAD_TYPE_LEN = 4  # length of a message type parameter in socket message header in bytes
+SOCKET_HEAD_SIZE_LEN = 4  # # length of a message length parameter in socket message header in bytes
+SOCKET_HEADLEN = SOCKET_HEAD_TYPE_LEN + SOCKET_HEAD_SIZE_LEN  # length of a socket message header (message type,
+# message length) in bytes
 SOCKET_HEADFORMAT = '4sL'  # formatting of a socket message header, 4s - 4 chars (bytes); L - unsigned long
 
 # SHARED

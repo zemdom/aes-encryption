@@ -2,6 +2,7 @@ import asyncio
 import threading
 
 from communication.socket import SocketProtocol
+from config import SOCKET_HEAD_TYPE_LEN
 from encryption.message_handler import ReceiverMessageHandler, SenderMessageHandler
 from communication.server import ServerProtocol
 from threads.async_queue import AsyncQueue
@@ -37,7 +38,7 @@ class ThreadHandler:
 
         message_handler = self._create_message_handler(key, queue_data, queue_plaindata, shared_data, port, gui_data)
 
-        self.task = asyncio.create_task(self._create_task(loop, message_handler, queue_data, address))
+        self.task = asyncio.create_task(self._create_task(loop, message_handler, queue_data,  gui_data, address))
 
         try:
             await self.task
@@ -47,12 +48,12 @@ class ThreadHandler:
     def _create_message_handler(self, key, queue_data, queue_plaindata, shared_data, port, gui_data):
         raise NotImplementedError
 
-    async def _create_task(self, loop, message_handler, queue_data, address):
+    async def _create_task(self, loop, message_handler, queue_data, gui_data, address):
         await asyncio.gather(message_handler.start_mainloop(),
-                             self._create_connection(loop, queue_data, address),
+                             self._create_connection(loop, queue_data, gui_data, address),
                              self.__wait_for_task_to_close(), loop=loop)
 
-    def _create_connection(self, loop, data, address):
+    def _create_connection(self, loop, data, gui_data, address):
         raise NotImplementedError
 
     async def __wait_for_task_to_close(self):
@@ -77,7 +78,7 @@ class ReceiverThreadHandler(ThreadHandler):
         return ReceiverMessageHandler(private_key, ingoing_data, ingoing_plaindata, shared_data, self.connection_open,
                                       encrypt=False)
 
-    async def _create_connection(self, loop, ingoing_data, port):
+    async def _create_connection(self, loop, ingoing_data, gui_data, port):
         server = await loop.create_server(lambda: ServerProtocol(ingoing_data, self.connection_open), '', port)
 
         async with server:
@@ -87,17 +88,22 @@ class ReceiverThreadHandler(ThreadHandler):
 class SenderThreadHandler(ThreadHandler):
     def __init__(self):
         super().__init__()
-        self.name = 'SENDER'
+        self.name = 'SENDER THREAD'
 
     def _create_message_handler(self, public_key, outgoing_data, outgoing_plaindata, shared_data, port, gui_data):
         return SenderMessageHandler(public_key, outgoing_plaindata, outgoing_data, shared_data, gui_data, port,
                                     self.connection_open)
 
-    async def _create_connection(self, loop, outgoing_data, address):
+    async def _create_connection(self, loop, outgoing_data, gui_data, address):
         host, port = address[0], address[1]
 
         while self.connection_open[0]:
             message = await outgoing_data.async_get()
+
+            # send signal to update GUI sending file progress bar
+            message_type = message[:SOCKET_HEAD_TYPE_LEN]
+            if message_type == b'FILE':
+                gui_data.sync_put('ACK')
 
             on_con_lost = loop.create_future()
             transport, protocol = await loop.create_connection(lambda: SocketProtocol(message, on_con_lost),

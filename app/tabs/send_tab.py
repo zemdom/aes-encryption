@@ -226,9 +226,27 @@ class ProgressBarWorker(QObject):
     def __init__(self, gui_data):
         QObject.__init__(self)
         self.gui_data = gui_data
+        self.progress_bar_data = []
+        self.ack_counter = 0
 
     @QtCore.pyqtSlot()
     def run(self):
         while True:
+            # if progress bar message was sent (two first ack messages do not signal progress bar data)
+            while self.ack_counter > 2 and self.progress_bar_data:
+                progress_bar_data = self.progress_bar_data[0]
+                if progress_bar_data == 100:
+                    self.ack_counter = 0
+                    self.progress_bar_data = []
+                else:
+                    self.ack_counter -= 1
+                    self.progress_bar_data = self.progress_bar_data[1:]
+                self.progress_bar_data_received.emit(progress_bar_data)
+
             message = self.gui_data.sync_get()
-            self.progress_bar_data_received.emit(message)
+
+            # if received signal from socket
+            if message == 'ACK':
+                self.ack_counter += 1
+            else:
+                self.progress_bar_data.append(message)
